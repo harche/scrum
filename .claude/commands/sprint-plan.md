@@ -55,4 +55,11 @@ Go through each section interactively:
 - Final count of items planned for next sprint
 - Total story points planned vs team capacity
 
+### Next Steps
+After showing the summary, use `AskUserQuestion` to offer follow-up actions:
+- **Run `/bug-triage`** — Review and schedule remaining open bugs
+- **Run `/team-load`** — Check updated workload distribution
+- **Run `/investigate <KEY>`** — Deep dive on a specific item from the plan
+- **Done** — End the planning session
+
 Always include clickable Jira URLs.

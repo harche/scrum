@@ -107,6 +107,17 @@ Node / Pod resource API, Node / Node Problem Detector, Node / Kueue, Node / Inst
 
 NEW → To Do → ASSIGNED → POST → Modified → ON_QA → Verified → CLOSED
 
+## Sprint Planning Workflow
+
+Recommended sequence for sprint planning prep:
+
+1. **`/sprint-status`** — Quick health check on the current sprint
+2. **`/carryovers`** — Identify what didn't finish and decide keep vs. descope
+3. **`/team-load`** — Check capacity across the team
+4. **`/sprint-plan`** — Full planning package (wrap-up, scheduled items, backlog, bugs, capacity)
+5. **`/bug-triage`** — Review and schedule open bugs
+6. **`/investigate <KEY>`** — Deep dive on specific items as needed
+
 ## Slash Commands
 
 | Command | Purpose |
