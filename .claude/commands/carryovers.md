@@ -1,9 +1,11 @@
-Analyze carryover items from the current Node Devices sprint.
+Analyze carryover items from the current sprint.
 
 ## Steps
 
-1. Find the active Node Core sprint:
-   `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh sprints active` — filter for "Node Core" in name.
+1. **Team Selection:** Use `AskUserQuestion` to ask which team (see "Team Selection" in CLAUDE.md). Use the selected team's sprint filter for all subsequent steps.
+
+2. Find the active sprint for the selected team:
+   `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh sprints active` — filter for the team's sprint name pattern.
 
 2. Get all sprint issues:
    `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh sprint-issues <sprintId>`

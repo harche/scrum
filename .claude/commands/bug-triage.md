@@ -1,18 +1,20 @@
-Run a bug triage session for Node Devices components.
+Run a bug triage session.
 
 ## Steps
 
-1. **Untriaged bugs** — priority not set:
-   `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh search 'project = OCPBUGS AND component in ("Node / Device Manager", "Node / Instaslice-operator") AND priority = Undefined AND status not in (CLOSED, Verified, Done) ORDER BY created DESC'`
+1. **Team Selection:** Use `AskUserQuestion` to ask which team (see "Team Selection" in CLAUDE.md). Use the selected team's bug components for all queries below.
 
-2. **Unassigned bugs** — no owner:
-   `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh search 'project = OCPBUGS AND component in ("Node / Device Manager", "Node / Instaslice-operator") AND assignee is EMPTY AND status not in (CLOSED, Verified, Done) ORDER BY priority DESC'`
+2. **Untriaged bugs** — priority not set:
+   `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh search 'project = OCPBUGS AND component in (<team bug components>) AND priority = Undefined AND status not in (CLOSED, Verified, Done) ORDER BY created DESC'`
 
-3. **Blocker proposals** — flagged as potential release blockers:
-   `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh search 'project = OCPBUGS AND component in ("Node / Device Manager", "Node / Instaslice-operator") AND "Release Blocker" = "Proposed" AND status not in (CLOSED, Verified, Done)'`
+3. **Unassigned bugs** — no owner:
+   `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh search 'project = OCPBUGS AND component in (<team bug components>) AND assignee is EMPTY AND status not in (CLOSED, Verified, Done) ORDER BY priority DESC'`
 
-4. **Customer escalations** — has linked support cases:
-   `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh search 'project = OCPBUGS AND component in ("Node / Device Manager", "Node / Instaslice-operator") AND "SFDC Cases Counter" is not EMPTY AND status not in (CLOSED, Verified, Done)'`
+4. **Blocker proposals** — flagged as potential release blockers:
+   `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh search 'project = OCPBUGS AND component in (<team bug components>) AND "Release Blocker" = "Proposed" AND status not in (CLOSED, Verified, Done)'`
+
+5. **Customer escalations** — has linked support cases:
+   `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh search 'project = OCPBUGS AND component in (<team bug components>) AND "SFDC Cases Counter" is not EMPTY AND status not in (CLOSED, Verified, Done)'`
 
 5. **New bugs this week**:
    `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh search 'project = OCPBUGS AND component in ("Node / Device Manager", "Node / Instaslice-operator") AND created >= -7d ORDER BY created DESC'`

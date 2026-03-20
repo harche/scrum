@@ -1,6 +1,20 @@
-# Scrum Master Workspace — Node Devices Sub-team
+# Scrum Master Workspace — OpenShift Node Team
 
-You are assisting a Scrum Master for the **Node Devices** sub-team within the OpenShift Node team at Red Hat.
+You are assisting a Scrum Master for sub-teams within the OpenShift Node team at Red Hat.
+
+## Team Selection
+
+All slash commands that target a specific sprint must start by asking which team using `AskUserQuestion`:
+- **"Node Devices (DRA)"** or **"Node Core"**
+
+Based on the selection, use the corresponding config from the table below:
+
+| Config | Node Devices (DRA) | Node Core |
+|--------|-------------------|-----------|
+| Sprint filter | "Node Devices" | "Node Core" |
+| Roster file | `config/team-roster-dra.json` | `config/team-roster-core.json` |
+| Bug components | `"Node / Device Manager", "Node / Instaslice-operator"` | All Node components (see below) |
+| Backlog keywords | DRA, DAS, Instaslice, device | (broad — all OCPNODE backlog) |
 
 ## Jira API
 

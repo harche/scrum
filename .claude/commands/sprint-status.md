@@ -1,8 +1,10 @@
-Show the current Node Devices sprint dashboard.
+Show the current sprint dashboard.
 
 ## Steps
 
-1. Run `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh sprints active` and find the sprint whose name contains "Node Core". Note its ID, name, startDate, and endDate.
+1. **Team Selection:** Use `AskUserQuestion` to ask which team (see "Team Selection" in CLAUDE.md). Use the selected team's sprint filter for all subsequent steps.
+
+2. Run `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh sprints active` and find the sprint matching the selected team's sprint name pattern. Note its ID, name, startDate, and endDate.
 
 2. Run `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh sprint-issues <sprintId>` to get all issues.
 

@@ -1,13 +1,15 @@
-Prepare materials for Node Devices sprint planning.
+Prepare materials for sprint planning.
 
 Takes an optional argument: the next sprint number. If not provided, discover the next future sprint.
 
 ## Steps
 
-1. Find active and future Node Core sprints:
+1. **Team Selection:** Use `AskUserQuestion` to ask which team (see "Team Selection" in CLAUDE.md). Use the selected team's sprint filter, roster file, and bug components for all subsequent steps.
+
+2. Find active and future sprints for the selected team:
    `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh sprints active`
    `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh sprints future`
-   Filter for "Node Core" in name. The active sprint is the current one; the future sprint is what we're planning.
+   Filter for the team's sprint name pattern. The active sprint is the current one; the future sprint is what we're planning.
 
 2. Get current sprint issues (carryovers):
    `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh sprint-issues <activeSprintId>`
@@ -16,11 +18,11 @@ Takes an optional argument: the next sprint number. If not provided, discover th
 3. Get items already in the next sprint:
    `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh sprint-issues <futureSprintId>`
 
-4. Check the backlog for candidates:
-   `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh search 'project = OCPNODE AND sprint is EMPTY AND status not in (Closed, Done) AND (component in ("Node / Device Manager", "Node / Instaslice-operator") OR summary ~ "DRA" OR summary ~ "DAS" OR summary ~ "Instaslice" OR summary ~ "device") ORDER BY priority DESC, created ASC' `
+4. Check the backlog for candidates (use the selected team's bug components and backlog keywords from Team Selection table in CLAUDE.md):
+   `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh search 'project = OCPNODE AND sprint is EMPTY AND status not in (Closed, Done) AND (component in (<team bug components>) OR summary ~ "<team keywords>") ORDER BY priority DESC, created ASC' `
 
-5. Check for open bugs that should be scheduled:
-   `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh search 'project = OCPBUGS AND component in ("Node / Device Manager", "Node / Instaslice-operator") AND sprint is EMPTY AND status not in (CLOSED, Verified, Done) ORDER BY priority DESC'`
+5. Check for open bugs that should be scheduled (use the selected team's bug components):
+   `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh search 'project = OCPBUGS AND component in (<team bug components>) AND sprint is EMPTY AND status not in (CLOSED, Verified, Done) ORDER BY priority DESC'`
 
 6. Produce the planning report:
 
@@ -42,7 +44,8 @@ Table of unscheduled items that could be pulled in: key, summary, priority, stor
 Table of bugs not yet in any sprint: key, summary, priority, assignee
 
 ### Team Capacity
-Load the **full team roster** from `config/team-roster.json`. List every roster member and their current carryover load (0 if none). This shows the full team's availability, not just those with carryovers.
+Load the **team roster** from the selected team's roster file.
+List every roster member and their current carryover load (0 if none). This shows the full team's availability, not just those with carryovers.
 
 ### Interactive Planning
 Go through each section interactively:

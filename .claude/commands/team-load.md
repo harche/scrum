@@ -1,14 +1,17 @@
-Show workload distribution across the Node Devices team.
+Show workload distribution across the team.
 
 ## Steps
 
-1. Find the active Node Core sprint:
-   `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh sprints active` — filter for "Node Core".
+1. **Team Selection:** Use `AskUserQuestion` to ask which team (see "Team Selection" in CLAUDE.md). Use the selected team's sprint filter and roster file for all subsequent steps.
 
-2. Get all sprint issues:
+2. Find the active sprint for the selected team:
+   `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh sprints active` — filter for the team's sprint name pattern.
+
+3. Get all sprint issues:
    `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh sprint-issues <sprintId>`
 
-3. Load the **full team roster** from `config/team-roster.json`. Every roster member gets a row — not just sprint assignees. Members with 0 assigned items should still appear (they may be available or OOO).
+4. Load the **team roster** from the selected team's roster file.
+   Every roster member gets a row — not just sprint assignees. Members with 0 assigned items should still appear (they may be available or OOO).
 
 4. Group by roster member and compute:
    - Total items assigned

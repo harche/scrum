@@ -1,4 +1,4 @@
-Prepare a summary for the weekly Node Devices standup/grooming meeting (Tuesdays 9 AM ET).
+Prepare a summary for the weekly standup/grooming meeting.
 
 This command uses a **two-phase approach** so the standup can begin immediately:
 - **Phase 1 (immediate):** Sprint board — show it right away so discussion can start.
@@ -6,15 +6,17 @@ This command uses a **two-phase approach** so the standup can begin immediately:
 
 ## Phase 1 — Sprint Board (show immediately)
 
-Run steps 1–5 (sprint discovery + 3 parallel Jira queries), then **display the Sprint Board output immediately** before moving to Phase 2.
+Run steps 1–6 (team selection + sprint discovery + 3 parallel Jira queries), then **display the Sprint Board output immediately** before moving to Phase 2.
 
-1. Find the active Node Devices sprint:
-   `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh sprints active` — filter for "Node Devices" in name.
+1. **Team Selection:** Use `AskUserQuestion` to ask which team (see "Team Selection" in CLAUDE.md). Use the selected team's sprint filter, roster file, and bug components for all subsequent steps.
+
+2. Find the active sprint for the selected team:
+   `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh sprints active` — filter for the team's sprint name pattern.
    Note the sprint startDate and endDate for progress calculation.
 
-2. Load the **full team roster** from `config/team-roster.json`.
+3. Load the **team roster** from the selected team's roster file.
 
-3. Run these 3 queries **in parallel:**
+4. Run these 3 queries **in parallel:**
 
    a. Get all sprint issues:
       `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh sprint-issues <sprintId>`
@@ -22,12 +24,12 @@ Run steps 1–5 (sprint discovery + 3 parallel Jira queries), then **display the
    b. Find recently updated items (last 7 days):
       `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh search 'sprint = <sprintId> AND updated >= -7d ORDER BY updated DESC'`
 
-   c. Check for new bugs filed against Node components in the last 7 days:
-      `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh search 'project = OCPBUGS AND component in ("Node / Device Manager", "Node / Instaslice-operator") AND created >= -7d ORDER BY created DESC'`
+   c. Check for new bugs filed against the selected team's components in the last 7 days (use bug components from Team Selection table in CLAUDE.md):
+      `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh search 'project = OCPBUGS AND component in (<team bug components>) AND created >= -7d ORDER BY created DESC'`
 
-4. **Display the Phase 1 output** (see Output § Phase 1 below).
+5. **Display the Phase 1 output** (see Output § Phase 1 below).
 
-5. After displaying Phase 1, use `AskUserQuestion` to ask: "Want to discuss any sprint items while team activity loads?" with options:
+6. After displaying Phase 1, use `AskUserQuestion` to ask: "Want to discuss any sprint items while team activity loads?" with options:
    - "Investigate an item" (then ask which #)
    - "Continue — wait for team activity"
    - "Skip team activity — go to actions"

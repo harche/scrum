@@ -1,4 +1,4 @@
-Check release readiness for Node Devices components.
+Check release readiness for Node components.
 
 Takes an optional argument: OCP version (e.g., 4.22). If not provided, discover the most common active fixVersion from open OCPNODE issues.
 
@@ -6,12 +6,14 @@ Argument: $ARGUMENTS (optional OCP version, e.g., "4.22")
 
 ## Steps
 
-1. If no version provided, discover it:
-   `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh search 'project = OCPNODE AND fixVersion is not EMPTY AND status not in (Closed, Done) AND component in ("Node / Device Manager", "Node / Instaslice-operator")' `
+1. **Team Selection:** Use `AskUserQuestion` to ask which team (see "Team Selection" in CLAUDE.md). Use the selected team's bug components for all queries below.
+
+2. If no version provided, discover it:
+   `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh search 'project = OCPNODE AND fixVersion is not EMPTY AND status not in (Closed, Done) AND component in (<team bug components>)' `
    Pick the most common fixVersion.
 
-2. **Approved blockers**:
-   `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh search 'project = OCPBUGS AND component in ("Node / Device Manager", "Node / Instaslice-operator") AND "Release Blocker" = "Approved" AND fixVersion ~ "<version>" AND status not in (CLOSED, Verified, Done)'`
+3. **Approved blockers**:
+   `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh search 'project = OCPBUGS AND component in (<team bug components>) AND "Release Blocker" = "Approved" AND fixVersion ~ "<version>" AND status not in (CLOSED, Verified, Done)'`
 
 3. **Proposed blockers**:
    `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh search 'project = OCPBUGS AND component in ("Node / Device Manager", "Node / Instaslice-operator") AND "Release Blocker" = "Proposed" AND fixVersion ~ "<version>" AND status not in (CLOSED, Verified, Done)'`

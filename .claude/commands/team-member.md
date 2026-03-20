@@ -4,7 +4,7 @@ Arguments: $ARGUMENTS
 Format: `<name-or-partial>`
 Example: `/team-member Sai` or `/team-member Aditi`
 
-Look up the GitHub handle from `config/team-roster.json` by matching the name argument (case-insensitive partial match) against roster keys. If no match is found, ask the user for the GitHub handle.
+Look up the GitHub handle by matching the name argument (case-insensitive partial match) against roster keys. Search both `config/team-roster-dra.json` and `config/team-roster-core.json` (no team selection needed — search all rosters). If no match is found, ask the user for the GitHub handle.
 
 ## Steps
 
