@@ -132,3 +132,9 @@ NEW → To Do → ASSIGNED → POST → Modified → ON_QA → Verified → CLOS
   2. Use the `AskUserQuestion` tool to ask for confirmation (e.g., "Post this comment to OCPNODE-1234?")
   3. Only execute the action if the user confirms
 - When showing sprint status, group items by status and highlight blockers
+- **Interactive lists:** When presenting lists of Jira issues or GitHub items (bugs, PRs, stories, etc.), go through categories one at a time. For each category:
+  1. Show the table of items
+  2. Use `AskUserQuestion` to ask which item(s) to deal with (list each as an option, plus "Skip" to move on)
+  3. If the user picks an item, investigate/act on it before continuing
+  4. After handling (or skipping), move to the next category
+  Do NOT dump all categories at once.
