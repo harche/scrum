@@ -27,4 +27,10 @@ Table per team member:
 - Flag unassigned items
 - Note items without story point estimates
 
+### Rebalancing
+If any imbalances are found (overloaded members, unassigned items, idle members), use `AskUserQuestion` to ask: "Would you like to rebalance workload?" with options:
+- Reassign specific items (then ask which item and to whom)
+- Review a team member's items in detail
+- No changes needed
+
 Always include clickable Jira URLs for in-progress items.

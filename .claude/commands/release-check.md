@@ -40,4 +40,12 @@ Table: key, summary, status, % children done (if possible to infer)
 - Ship/no-ship recommendation based on blocker count and severity
 - Key risks
 
+### Blocker Actions
+For each blocker or high-risk item, use `AskUserQuestion` to ask: "What to do with this blocker?" with options:
+- Escalate (add comment or change priority)
+- Reassign
+- Mark as accepted risk
+- Investigate further
+- Skip
+
 Always include clickable Jira URLs.

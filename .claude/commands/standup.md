@@ -37,4 +37,11 @@ Any new bugs filed this week against Devices-related components
 - Items needing grooming (no story points, no assignee, vague summary)
 - Items that may need to be descoped or carried over
 
+### Standup Actions
+After presenting the report, use `AskUserQuestion` to ask: "Any items to act on before the meeting?" with options:
+- Flag an item as blocked
+- Highlight specific items for discussion
+- Reassign an item
+- No actions needed
+
 Always include clickable Jira URLs.

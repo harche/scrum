@@ -37,4 +37,11 @@ Bullet-point summary of what was delivered (synthesized from completed item summ
 - Items that were added mid-sprint
 - Suggestions for next sprint
 
+### Review Prep
+After presenting the summary, use `AskUserQuestion` to ask: "Any items to highlight for the sprint review?" with options:
+- Select items to demo / call out
+- Flag carryovers to discuss
+- Note accomplishments to emphasize
+- Report looks good as-is
+
 Always include clickable Jira URLs.

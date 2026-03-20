@@ -21,13 +21,17 @@ Analyze carryover items from the current Node Devices sprint.
 ### Carryover Items
 Table: key, type, summary, status, assignee, story points, blocked reason (if any)
 
-### Analysis
-For each carryover:
-- **Why it's carrying over**: infer from status (still To Do = never started, In Progress = partially done, Code Review = waiting on review)
-- **Recommended action**: keep in next sprint / descope / needs discussion
-- **Risk**: is this blocking other work?
+### Interactive Review
+Present carryovers one at a time (or in small groups by assignee). For each carryover:
+- Show: key, summary, status, assignee, story points, why it's carrying over (infer from status)
+- Use `AskUserQuestion` to ask: "What to do with this carryover?" with options:
+  - Move to next sprint (keep)
+  - Descope / remove from sprint
+  - Re-estimate story points
+  - Reassign
+  - Skip
 
-### Summary Stats
+### Summary Stats (shown at the end)
 - Total carryover count and story points
 - By assignee: who has the most carryovers
 - By type: bugs vs stories vs spikes

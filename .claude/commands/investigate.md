@@ -44,3 +44,11 @@ Key status changes and dates (inferred from comments/description).
 
 ### Summary
 Brief assessment: what's the current state, what's blocking progress, what needs to happen next.
+
+### Next Steps
+After presenting the investigation, use `AskUserQuestion` to ask: "What would you like to do with this issue?" with options:
+- Set priority
+- Assign / reassign
+- Transition status (e.g., move to POST, MODIFIED)
+- Add a comment
+- Done (no action needed)

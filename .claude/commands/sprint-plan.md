@@ -44,9 +44,15 @@ Table of bugs not yet in any sprint: key, summary, priority, assignee
 ### Team Capacity
 Discover team members from current sprint assignees. List each person and their current carryover load.
 
-### Suggested Actions
-- Which carryovers to keep vs descope
-- High-priority backlog items to pull in
-- Bugs that need scheduling
+### Interactive Planning
+Go through each section interactively:
+
+1. **Carryovers**: For each not-done item, use `AskUserQuestion`: "Keep in next sprint? Descope? Re-estimate?"
+2. **Backlog candidates**: For each candidate, ask: "Pull into sprint? Set points? Assign? Skip?"
+3. **Open bugs**: For each unscheduled bug, ask: "Add to sprint? Assign? Skip?"
+
+### Summary (shown at the end)
+- Final count of items planned for next sprint
+- Total story points planned vs team capacity
 
 Always include clickable Jira URLs.
