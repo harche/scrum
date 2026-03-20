@@ -8,7 +8,9 @@ Show workload distribution across the Node Devices team.
 2. Get all sprint issues:
    `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh sprint-issues <sprintId>`
 
-3. Group by assignee and compute:
+3. Load the **full team roster** from `config/team-roster.json`. Every roster member gets a row — not just sprint assignees. Members with 0 assigned items should still appear (they may be available or OOO).
+
+4. Group by roster member and compute:
    - Total items assigned
    - Items by status (To Do, In Progress, Code Review, Done)
    - Total story points assigned

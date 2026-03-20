@@ -42,7 +42,7 @@ Table of unscheduled items that could be pulled in: key, summary, priority, stor
 Table of bugs not yet in any sprint: key, summary, priority, assignee
 
 ### Team Capacity
-Discover team members from current sprint assignees. List each person and their current carryover load.
+Load the **full team roster** from `config/team-roster.json`. List every roster member and their current carryover load (0 if none). This shows the full team's availability, not just those with carryovers.
 
 ### Interactive Planning
 Go through each section interactively:

@@ -1,10 +1,10 @@
 Show a comprehensive activity summary for a team member during the current sprint.
 
 Arguments: $ARGUMENTS
-Format: `<name-or-partial> <github-handle>`
-Example: `/team-member Sai sairameshv` or `/team-member Aditi aditisahay`
+Format: `<name-or-partial>`
+Example: `/team-member Sai` or `/team-member Aditi`
 
-If the GitHub handle is not provided, ask the user for it.
+Look up the GitHub handle from `config/team-roster.json` by matching the name argument (case-insensitive partial match) against roster keys. If no match is found, ask the user for the GitHub handle.
 
 ## Steps
 
@@ -85,3 +85,17 @@ Table with: #, repo, title, their role (author/commenter)
 - Conversation threads that may need follow-up
 
 Always include clickable Jira URLs and GitHub URLs.
+
+### Actions
+After presenting the report, use `AskUserQuestion` to ask: "Any actions for [Person Name]?" with options:
+- Post to GitHub Discussion
+- No actions needed
+
+## Posting to GitHub Discussion (Optional)
+
+When the user opts to post, add the report as a **comment** on an existing Discussion (e.g., the standup discussion for this sprint). Use `AskUserQuestion` to ask for the discussion number if not already known (e.g., "Which discussion number to post to? (e.g., 3)").
+
+1. **Build the report body** — write the full output (sprint items, Jira activity, GitHub PRs, reviews, issues, overall assessment) as markdown to a temp file.
+
+2. **Post:** `bin/gh-discussion.sh comment <discussion-number> <body-file>`
+   Show the returned comment URL to the user.
