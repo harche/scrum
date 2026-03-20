@@ -25,6 +25,9 @@ bin/jira.sh comments <ISSUE-KEY>
 # Move issue(s) to a sprint
 bin/jira.sh move-to-sprint <sprintId> <ISSUE-KEY> [<ISSUE-KEY>...]
 
+# Set story points on an issue
+bin/jira.sh set-points <ISSUE-KEY> <points>
+
 # Get available transitions for an issue
 bin/jira.sh transitions <ISSUE-KEY>
 ```

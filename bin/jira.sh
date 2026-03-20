@@ -106,6 +106,13 @@ print(json.dumps({
   _curl -X POST "${JIRA_BASE}/rest/api/3/issue/${key}/comment" -d "$payload"
 }
 
+cmd_set_points() {
+  local key="$1"
+  local points="$2"
+  _curl -X PUT "${JIRA_BASE}/rest/api/3/issue/${key}" \
+    -d "{\"fields\": {\"customfield_10028\": ${points}}}"
+}
+
 cmd_move_to_sprint() {
   local sprint_id="$1"
   shift
@@ -125,6 +132,7 @@ Commands:
   sprints [state]             List sprints (active|future|closed)
   sprint-issues <sprintId> [limit]  Get issues in a sprint (default limit: 100)
   move-to-sprint <sprintId> <KEY...> Move issue(s) to a sprint
+  set-points <ISSUE-KEY> <points>   Set story points on an issue
   comments <ISSUE-KEY>        List comments on an issue
   comment <ISSUE-KEY> <body>   Add a comment to an issue
   transitions <ISSUE-KEY>     Get available transitions
@@ -163,6 +171,7 @@ case "${1:-help}" in
   comments)       cmd_comments "${2:?ISSUE-KEY required}" ;;
   comment)        cmd_comment "${2:?ISSUE-KEY required}" "${3:?Comment body required}" ;;
   move-to-sprint) cmd_move_to_sprint "${2:?Sprint ID required}" "${@:3}" ;;
+  set-points)     cmd_set_points "${2:?ISSUE-KEY required}" "${3:?Story points required}" ;;
   transitions)    cmd_transitions "${2:?ISSUE-KEY required}" ;;
   help|--help|-h) cmd_help ;;
   *)              echo "Unknown command: $1" >&2; cmd_help >&2; exit 1 ;;
