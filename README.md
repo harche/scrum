@@ -45,3 +45,9 @@ Requires:
 | `/blocker <KEY>` | Flag/unflag a blocker |
 | `/briefing <KEY>` | Get up to speed on an issue |
 | `/handoff <KEY>` | Prepare a handoff summary |
+
+### Meta
+
+| Command | Purpose |
+|---------|---------|
+| `/self-improvement` | Review session errors and propose workspace fixes |

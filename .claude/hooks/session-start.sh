@@ -30,4 +30,7 @@ Team Member commands:
   /blocker <KEY>        — Flag/unflag a blocker on an issue
   /briefing <KEY>       — Get up to speed on an issue fast
   /handoff <KEY>        — Prepare a handoff summary for transfer
+
+Meta commands:
+  /self-improvement     — Review session errors and propose workspace fixes
 EOF
