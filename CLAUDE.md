@@ -134,18 +134,39 @@ Recommended sequence for sprint planning prep:
 
 ## Slash Commands
 
-| Command | Purpose |
-|---------|---------|
-| `/sprint-status` | Current sprint dashboard |
-| `/standup` | Weekly standup prep (Tuesdays) |
-| `/sprint-plan` | Sprint planning preparation |
-| `/bug-triage` | Bug triage session |
-| `/carryovers` | Carryover analysis |
-| `/team-load` | Workload distribution |
-| `/investigate [KEY]` | Deep dive on a single issue |
-| `/team-member <name> <gh-handle>` | Individual team member activity summary |
-| `/release-check [version]` | Release readiness check |
-| `/sprint-review` | Sprint review summary |
+### Scrum Master Commands
+
+| Command | Purpose | Source |
+|---------|---------|--------|
+| `/sprint-status` | Current sprint dashboard | Jira |
+| `/standup` | Weekly standup prep (Tuesdays) | Jira |
+| `/standup-github` | GitHub activity for all team members | GitHub |
+| `/sprint-plan` | Sprint planning preparation | Jira |
+| `/bug-triage` | Bug triage session | Jira |
+| `/carryovers` | Carryover analysis | Jira |
+| `/team-load` | Workload distribution | Jira |
+| `/investigate [KEY]` | Deep dive on a single issue | Jira |
+| `/team-member <name>` | Individual Jira activity summary | Jira |
+| `/team-member-github <name>` | Individual GitHub activity summary | GitHub |
+| `/release-check [version]` | Release readiness check | Jira |
+| `/sprint-review` | Sprint review summary | Jira |
+
+### Team Member Commands
+
+| Command | Purpose | Source | Asks Team? |
+|---------|---------|--------|------------|
+| `/my-board` | My assigned sprint items by status | Jira | Yes |
+| `/my-bugs` | My bugs sorted by severity, age, customer impact | Jira | Yes |
+| `/my-epics` | Progress on epics I'm contributing to | Jira | Yes |
+| `/pickup` | Find unassigned work to grab | Jira | Yes |
+| `/update <KEY>` | Quick update: comment, transition, set points | Jira | No |
+| `/blocker <KEY>` | Flag/unflag a blocker on an issue | Jira | No |
+| `/my-prs` | My open PRs + PRs requesting my review | GitHub | No |
+| `/my-github-issues` | My GitHub issues (authored, assigned, commented) | GitHub | No |
+| `/review-queue` | PRs waiting for my review, prioritized | GitHub | No |
+| `/my-standup` | Personal standup talking points (done/doing/blocked) | Both | Yes |
+| `/briefing <KEY>` | Get up to speed on an issue fast | Both | No |
+| `/handoff <KEY>` | Prepare a handoff summary for an issue | Both | No |
 
 ## Output Conventions
 
