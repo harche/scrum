@@ -57,8 +57,22 @@ Sort by age (oldest first — review these first).
 
 Always include clickable GitHub URLs.
 
-### Actions
-After presenting the report, use `AskUserQuestion` to ask: "What would you like to do?" with options:
-- Open a PR in browser
-- Check CI details on a PR
-- No actions needed
+### Contextual Actions (Dynamic)
+
+After presenting the report, use `AskUserQuestion`: "Which PR would you like to act on?" with each PR number as an option, plus "Done (no actions needed)".
+
+When the user picks a PR, resolve its available actions from the GitHub API:
+
+1. **Fetch PR details:** `gh pr view <PR-URL> --json state,reviewDecision,statusCheckRollup,isDraft,mergeable,headRefName`
+2. **Build dynamic options** based on the PR's current state:
+   - **If approved + checks passing + mergeable:** "Merge this PR" (primary action), "Squash and merge", "Rebase and merge"
+   - **If approved + checks failing:** "View failing checks" (`gh pr checks <PR-URL>`), "Re-run failed checks"
+   - **If changes requested:** "View review comments" (`gh pr view <PR-URL> --comments`), "Push a fix and re-request review"
+   - **If no reviews yet:** "Request review from..." (list team members from roster files by GitHub handle)
+   - **If draft:** "Mark as ready for review" (`gh pr ready <PR-URL>`)
+   - **If checks pending:** "View check status" (`gh pr checks <PR-URL>`)
+   - Always include: "Add a comment", "Close PR", "Open in browser", "Done (back to list)"
+
+3. **Execute the chosen action** (with confirmation via `AskUserQuestion` for any write operation).
+
+4. **Action loop:** After executing an action, re-fetch PR state and offer updated actions. Continue until user picks "Done (back to list)". Then return to PR selection.

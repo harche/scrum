@@ -66,7 +66,20 @@ Only show issues not already in the tables above.
 
 Always include clickable GitHub URLs.
 
-### Actions
-After presenting the report, use `AskUserQuestion` to ask: "What would you like to do?" with options:
-- Open an issue in browser
-- No actions needed
+### Contextual Actions (Dynamic)
+
+After presenting the report, use `AskUserQuestion`: "Which issue would you like to act on?" with each issue number as an option, plus "Done (no actions needed)".
+
+When the user picks an issue, resolve its available actions from the GitHub API:
+
+1. **Fetch issue details:** `gh issue view <ISSUE-URL> --json state,assignees,labels,comments`
+2. **Build dynamic options** based on the issue's current state:
+   - **If open + I authored it:** "Close as completed", "Close as not planned"
+   - **If open + no assignee:** "Assign to me", "Assign to..." (list team members)
+   - **If open:** "Add a label" (show existing repo labels), "Remove a label"
+   - **If stale (>30 days, flagged above):** "Add a status update comment", "Close as stale"
+   - Always include: "Add a comment", "Open in browser", "Done (back to list)"
+
+3. **Execute the chosen action** (with confirmation via `AskUserQuestion` for any write operation).
+
+4. **Action loop:** After executing an action, re-fetch issue state and offer updated actions. Continue until user picks "Done (back to list)". Then return to issue selection.

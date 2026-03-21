@@ -52,11 +52,27 @@ Table with: #, key, type, summary, status, story points
 
 Always include clickable Jira URLs.
 
-### Actions
-After presenting the report, use `AskUserQuestion` to ask: "Any actions for [Person Name]?" with options:
-- Run `/team-member-github <name>` for GitHub activity
-- Post to GitHub Discussion
-- No actions needed
+### Contextual Actions (Dynamic)
+
+After presenting the report, use `AskUserQuestion`: "What would you like to do?" with options:
+
+- "Act on one of [Person Name]'s items" — then ask which item number
+- "Run `/team-member-github <name>`" — for their GitHub activity
+- "Post to GitHub Discussion"
+- "Done (no actions needed)"
+
+**If user picks an item**, resolve available actions from the API:
+1. Fetch transitions: `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh transitions <KEY>`
+2. Check state: has points? blocked? assignee?
+3. Build dynamic options:
+   - List available transitions by name (from the transitions API)
+   - "Reassign" (list roster members)
+   - "Set story points" / "Update story points"
+   - "Flag as blocked" / "Unflag blocker"
+   - "Add a comment"
+   - "Investigate (deep dive)"
+   - "Done (back to report)"
+4. Execute with confirmation. Action loop until user returns.
 
 ## Posting to GitHub Discussion (Optional)
 

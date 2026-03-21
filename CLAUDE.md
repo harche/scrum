@@ -191,3 +191,39 @@ Recommended sequence for sprint planning prep:
   3. If the user picks an item, investigate/act on it before continuing
   4. After handling (or skipping), move to the next category
   Do NOT dump all categories at once.
+
+## Contextual Actions (Generative UI)
+
+Every slash command ends with a dynamic action menu driven by the actual API state — never hardcoded option lists. This turns each command into an interactive workflow where the user can take follow-up actions without leaving the flow.
+
+### Pattern for Jira Items
+
+After presenting results, for any item the user selects:
+
+1. **Fetch available transitions:** `bin/jira.sh transitions <KEY>` — returns the exact transitions available for that issue's current status
+2. **Check field state** from the already-fetched issue:
+   - `customfield_10028` (Story Points): offer "Set points" or "Update points"
+   - `customfield_10517` (Blocked): offer "Unflag blocker" or "Flag as blocked"
+   - `customfield_10847` (Release Blocker): offer blocker status change
+   - `assignee`: offer "Reassign" or "Assign"
+   - `customfield_10978` (SFDC Cases): offer "View customer cases"
+3. **Build `AskUserQuestion` options dynamically** — transitions by name + field-based options + "Add a comment" + "Done"
+4. **Action loop:** After executing an action, re-fetch the issue and transitions, then offer the next set of actions. Continue until the user picks "Done".
+
+### Pattern for GitHub Items (PRs/Issues)
+
+After presenting results, for any PR/issue the user selects:
+
+1. **Fetch PR state:** `gh pr view <URL> --json state,reviewDecision,statusCheckRollup,isDraft,mergeable`
+2. **Build options from state:**
+   - Approved + checks passing + mergeable → "Merge", "Squash and merge"
+   - Checks failing → "View failing checks", "Re-run checks"
+   - No reviews → "Request review from..." (list roster handles)
+   - Draft → "Mark ready for review"
+   - Changes requested → "View review comments"
+   - Always: "Add a comment", "Open in browser", "Done"
+3. **Action loop:** Re-fetch state after each action, offer updated options.
+
+### Key Principle
+
+The API is the source of truth for what's possible. Options shown to the user reflect the **actual current state** — if a transition isn't available, it doesn't appear. If a PR is already approved, "Merge" is offered. This prevents stale or impossible actions.

@@ -57,10 +57,22 @@ Table with: #, repo, title, their role (author/commenter)
 
 Always include clickable GitHub URLs.
 
-### Actions
-After presenting the report, use `AskUserQuestion` to ask: "Any actions?" with options:
-- Post to GitHub Discussion
-- No actions needed
+### Contextual Actions (Dynamic)
+
+After presenting the report, use `AskUserQuestion`: "What would you like to do?" with options:
+- "Act on one of [Person Name]'s PRs" — then ask which PR number
+- "Post to GitHub Discussion"
+- "Done (no actions needed)"
+
+**If user picks a PR**, resolve actions from the GitHub API:
+1. Fetch PR details: `gh pr view <PR-URL> --json state,reviewDecision,statusCheckRollup,isDraft,mergeable`
+2. Build dynamic options based on state:
+   - Approved + passing → "Merge", "Squash and merge"
+   - No reviews → "Request review from..." (list roster handles)
+   - Changes requested → "View review comments"
+   - Draft → "Mark ready for review"
+   - Always: "Add a comment", "Approve", "Request changes", "Open in browser", "Done (back to report)"
+3. Execute with confirmation. Action loop until user returns.
 
 ## Posting to GitHub Discussion (Optional)
 

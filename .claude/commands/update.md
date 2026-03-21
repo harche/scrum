@@ -13,12 +13,18 @@ Example: `/update OCPNODE-1234` or `/update OCPBUGS-65805`
    Display: key, summary, status, assignee, story points, sprint, priority.
    Convert description from ADF to readable text (brief summary, first ~3 lines).
 
-3. **Ask what to update:**
-   Use `AskUserQuestion`: "What would you like to update on [KEY]?" with options:
-   - Add a comment
-   - Transition status
-   - Set story points
-   - Reassign
+3. **Resolve available actions dynamically:**
+   a. Fetch available transitions: `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh transitions $ARGUMENTS`
+   b. Check current state from the fetched issue:
+      - Has story points (customfield_10028)? → offer "Update story points" : "Set story points"
+      - Is blocked (customfield_10517 set)? → offer "Unflag blocker" : "Flag as blocked"
+      - Has assignee? → offer "Reassign" : "Assign"
+
+   c. Use `AskUserQuestion`: "What would you like to do with [KEY]?"
+      - List each available transition by name (from the transitions API)
+      - Include the state-based options from step b
+      - Always include: "Add a comment"
+      - Always include: "Done (no action needed)"
 
 4. **Execute the chosen action:**
 
@@ -49,5 +55,7 @@ Example: `/update OCPNODE-1234` or `/update OCPBUGS-65805`
    - Use `AskUserQuestion`: "Who should this be assigned to?" — search both roster files for names as options
    - Use `AskUserQuestion` to confirm the reassignment
    - If confirmed, update via REST API
+
+5. **Action loop:** After executing an action, re-fetch the issue and transitions, then offer the next set of contextual actions. Continue until the user picks "Done".
 
 Always include clickable Jira URLs.

@@ -42,12 +42,31 @@ Table: key, summary, status, % children done (if possible to infer)
 - Ship/no-ship recommendation based on blocker count and severity
 - Key risks
 
-### Blocker Actions
-For each blocker or high-risk item, use `AskUserQuestion` to ask: "What to do with this blocker?" with options:
-- Escalate (add comment or change priority)
-- Reassign
-- Mark as accepted risk
-- Investigate further
-- Skip
+### Contextual Actions (Dynamic)
+
+Present blockers and high-risk items interactively. For each item:
+
+1. **Fetch available transitions:** `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh transitions <KEY>`
+2. **Check current state:**
+   - Is blocked (customfield_10517)? → offer "Unflag blocker" : "Flag as blocked"
+   - Has assignee? → offer "Reassign" : "Assign" (list roster members)
+   - Is release blocker approved/proposed (customfield_10847)? → offer "Change release blocker status"
+   - Has SFDC cases? → offer "View customer cases"
+
+3. **Build dynamic options** for `AskUserQuestion`: "What to do with [KEY]?"
+   - List each available transition by name (from the transitions API)
+   - "Escalate (add comment + change priority)"
+   - Include the state-based options from step 2
+   - "Add a comment"
+   - "Investigate (deep dive)"
+   - "Mark as accepted risk" (add comment noting acceptance)
+   - "Skip"
+
+4. **Execute the chosen action** (with confirmation). Action loop until user skips.
+
+After all blockers reviewed, offer final actions:
+- "Act on an open bug from the list" — then select and offer per-item dynamic actions
+- "Run `/bug-triage`" — full triage session
+- "Done"
 
 Always include clickable Jira URLs.

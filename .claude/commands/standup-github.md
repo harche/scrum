@@ -49,11 +49,25 @@ For each member:
 - Keep it to 1–2 sentences max — this is a standup, not a performance review
 - Members with zero GitHub activity: "No visible GitHub activity this week"
 
-### Actions
-Use `AskUserQuestion` to ask: "Any actions?" with options:
-- Drill into a specific member's GitHub activity
-- Publish to GitHub Discussions (append to existing standup discussion)
-- No actions needed
+### Contextual Actions (Dynamic)
+
+Use `AskUserQuestion`: "What would you like to do?" with options:
+- "Drill into a member's activity" — then ask which member number
+- "Act on a specific PR" — then ask for the PR URL or member + PR number
+- "Publish to GitHub Discussions"
+- "Done (no actions needed)"
+
+**If user drills into a member**, show their full PR/review/comment tables, then use `AskUserQuestion`: "Which PR or issue would you like to act on?" with item numbers + "Done (back to team view)".
+
+**If user picks a PR**, resolve actions from the GitHub API:
+1. Fetch PR details: `gh pr view <PR-URL> --json state,reviewDecision,statusCheckRollup,isDraft,mergeable`
+2. Build dynamic options based on state:
+   - Approved + passing → "Merge", "Squash and merge"
+   - No reviews → "Request review from..." (list roster handles)
+   - Changes requested → "View review comments"
+   - Draft → "Mark ready for review"
+   - Always: "Add a comment", "Open in browser", "Done (back to member)"
+3. Execute with confirmation. Action loop until user returns.
 
 Always include clickable GitHub URLs where relevant.
 

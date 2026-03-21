@@ -44,7 +44,19 @@ Only show PRs not already in the review-requested list above.
 
 Always include clickable GitHub URLs.
 
-### Actions
-After presenting the queue, use `AskUserQuestion` to ask: "What would you like to do?" with options:
-- Open a PR in browser
-- Skip (done reviewing queue)
+### Contextual Actions (Dynamic)
+
+After presenting the queue, use `AskUserQuestion`: "Which PR would you like to act on?" with each PR number as an option, plus "Done (finished reviewing queue)".
+
+When the user picks a PR, resolve its available actions from the GitHub API:
+
+1. **Fetch PR details:** `gh pr view <PR-URL> --json state,reviewDecision,statusCheckRollup,isDraft,mergeable,additions,deletions,changedFiles`
+2. **Build dynamic options** based on the PR's current state:
+   - **If checks passing:** "Approve this PR", "Approve and merge"
+   - **If checks failing:** "View failing checks", "Comment about failing checks"
+   - **If draft:** "Comment (PR is still draft)"
+   - Always include: "Add a review comment", "Request changes", "View diff summary" (`gh pr diff <PR-URL> --stat`), "Open in browser", "Done (back to queue)"
+
+3. **Execute the chosen action** (with confirmation via `AskUserQuestion` for any write operation).
+
+4. **Action loop:** After executing an action, re-fetch PR state and offer updated actions. Continue until user picks "Done (back to queue)". Then return to PR selection.

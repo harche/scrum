@@ -62,19 +62,33 @@ Based on the description, comments, and current status:
 
 Always include clickable Jira and GitHub URLs.
 
-### Actions
-After presenting the handoff summary, use `AskUserQuestion` to ask: "What would you like to do?" with options:
-- Reassign to a team member (show roster names)
-- Post handoff summary as a comment on the issue
-- No actions needed
+### Contextual Actions (Dynamic)
 
-**Reassign flow:**
-- Search both `config/team-roster-dra.json` and `config/team-roster-core.json` for team member names
-- Use `AskUserQuestion` to pick the new assignee
-- Use `AskUserQuestion` to confirm: "Reassign [KEY] to [name] and post handoff comment?"
-- If confirmed: reassign via REST API and post the handoff summary as a Jira comment
+After presenting the handoff summary, resolve available actions from the API:
 
-**Post comment flow:**
-- Draft the handoff summary as a Jira comment
-- Use `AskUserQuestion` to confirm
-- If confirmed, post via REST API
+1. **Fetch available transitions:** `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh transitions $ARGUMENTS`
+2. **Check current state** from the already-fetched issue data:
+   - Has story points (customfield_10028)? → offer "Update story points" : "Set story points"
+   - Is blocked (customfield_10517 set)? → offer "Unflag blocker" : "Flag as blocked"
+
+3. **Build dynamic options** for `AskUserQuestion`: "What would you like to do with [$ARGUMENTS]?"
+   - "Reassign to a team member" — always offered (this is a handoff)
+   - "Post handoff summary as a comment"
+   - List each available transition by name (e.g., "Move to To Do", "Move to In Progress") — from the transitions API
+   - Include the state-based options from step 2
+   - Always include: "Done (no action needed)"
+
+4. **Execute the chosen action** (with confirmation via `AskUserQuestion` for any write operation):
+
+   **Reassign flow:**
+   - Search both `config/team-roster-dra.json` and `config/team-roster-core.json` for team member names
+   - Use `AskUserQuestion` to pick the new assignee from roster names
+   - Use `AskUserQuestion` to confirm: "Reassign [KEY] to [name] and post handoff comment?"
+   - If confirmed: reassign via REST API and post the handoff summary as a Jira comment
+
+   **Post comment flow:**
+   - Draft the handoff summary as a Jira comment
+   - Use `AskUserQuestion` to confirm
+   - If confirmed, post via REST API
+
+5. **Action loop:** After executing an action, re-fetch the issue and transitions, then offer the next set of contextual actions. Continue until the user picks "Done".

@@ -39,11 +39,31 @@ Bullet-point summary of what was delivered (synthesized from completed item summ
 - Items that were added mid-sprint
 - Suggestions for next sprint
 
-### Review Prep
-After presenting the summary, use `AskUserQuestion` to ask: "Any items to highlight for the sprint review?" with options:
-- Select items to demo / call out
-- Flag carryovers to discuss
-- Note accomplishments to emphasize
-- Report looks good as-is
+### Contextual Actions (Dynamic)
+
+After presenting the summary, use `AskUserQuestion`: "What would you like to do?" with options:
+- "Act on a carryover item" — drill into incomplete items
+- "Add a retrospective comment to an item"
+- "Highlight items for the sprint review"
+- "Done (report looks good as-is)"
+
+**If user picks "Act on a carryover item":**
+Show the carryover table and ask which item. For the selected item:
+1. Fetch transitions: `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh transitions <KEY>`
+2. Check state: has points? blocked? assignee?
+3. Build dynamic options:
+   - List available transitions by name (e.g., "Move to next sprint", "Close")
+   - "Re-estimate story points" / "Set story points"
+   - "Reassign"
+   - "Flag as blocked" / "Unflag blocker"
+   - "Add a comment"
+   - "Done (back to review)"
+4. Execute with confirmation. Action loop until user returns.
+
+**If user picks "Add a retrospective comment":**
+Ask which item (from completed or carryover list). Draft and confirm comment. Post to Jira.
+
+**If user picks "Highlight items":**
+Use `AskUserQuestion` with multiSelect to pick items to demo/call out. Format a highlighted summary.
 
 Always include clickable Jira URLs.

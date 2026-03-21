@@ -45,10 +45,23 @@ Key status changes and dates (inferred from comments/description).
 ### Summary
 Brief assessment: what's the current state, what's blocking progress, what needs to happen next.
 
-### Next Steps
-After presenting the investigation, use `AskUserQuestion` to ask: "What would you like to do with this issue?" with options:
-- Set priority
-- Assign / reassign
-- Transition status (e.g., move to POST, MODIFIED)
-- Add a comment
-- Done (no action needed)
+### Contextual Actions (Dynamic)
+
+After presenting the investigation, resolve available actions from the API:
+
+1. **Fetch available transitions:** `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh transitions $ARGUMENTS`
+2. **Check current state** from the already-fetched issue data:
+   - Has story points (customfield_10028)? → offer "Update story points" : "Set story points"
+   - Is blocked (customfield_10517 set)? → offer "Unflag blocker" : "Flag as blocked"
+   - Has assignee? → offer "Reassign" : "Assign"
+   - Has linked SFDC cases? → offer "View customer cases"
+
+3. **Build dynamic options** for `AskUserQuestion`: "What would you like to do with [$ARGUMENTS]?"
+   - List each available transition by name (e.g., "Move to In Progress", "Move to Code Review", "Close") — use the transition names returned by the API
+   - Include the state-based options from step 2
+   - Always include: "Add a comment"
+   - Always include: "Done (no action needed)"
+
+4. **Execute the chosen action** (with confirmation via `AskUserQuestion` for any write operation).
+
+5. **Action loop:** After executing an action, re-fetch the issue and transitions, then offer the next set of contextual actions. Continue until the user picks "Done".

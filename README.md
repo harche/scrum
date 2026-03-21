@@ -2,6 +2,8 @@
 
 Claude Code slash commands for managing sprints, standups, and daily work on the OpenShift Node team.
 
+Every command is an interactive workflow — after showing results, it offers contextual follow-up actions based on the actual API state (available Jira transitions, GitHub PR review/CI status, field values). Pick an item, act on it, and keep going without leaving the flow.
+
 ## Setup
 
 Requires:
@@ -51,3 +53,16 @@ Requires:
 | Command | Purpose |
 |---------|---------|
 | `/self-improvement` | Review session errors and propose workspace fixes |
+
+## How It Works
+
+Each command follows a **show → select → act → loop** pattern:
+
+1. **Show** — Fetches data from Jira/GitHub APIs and presents it in tables
+2. **Select** — Asks which item to act on (numbered for easy reference)
+3. **Act** — Queries the API for available actions on that item:
+   - **Jira:** Fetches actual transitions (`bin/jira.sh transitions`), checks field state (story points, blocked status, assignee, customer cases)
+   - **GitHub:** Fetches PR state (`gh pr view --json`), checks review decision, CI status, merge readiness
+4. **Loop** — After each action, re-fetches state and offers the next set of actions. Continues until you're done.
+
+The options you see are always driven by the current state — if a Jira transition isn't available, it won't appear. If a PR is approved with passing checks, "Merge" is offered. No stale menus.

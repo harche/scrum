@@ -33,4 +33,23 @@ Flag items that might not finish this sprint:
 ### Team Workload
 Table: assignee, # items in progress, # items done, # items total
 
+### Contextual Actions (Dynamic)
+
+After presenting the dashboard, use `AskUserQuestion` to ask: "Which item would you like to act on?" with item numbers from the In Progress, Code Review, To Do, and Blocked tables as options, plus "Run /sprint-plan", "Run /bug-triage", "Done (no actions needed)".
+
+When the user picks an item, resolve that item's available actions from the API:
+
+1. **Fetch available transitions:** `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh transitions <SELECTED-KEY>`
+2. **Check current state:**
+   - Has story points? → offer "Update story points" : "Set story points"
+   - Is blocked? → offer "Unflag blocker" : "Flag as blocked"
+   - Has assignee? → offer "Reassign" : "Assign"
+
+3. **Build dynamic options** for `AskUserQuestion`: "What would you like to do with [KEY]?"
+   - List each available transition by name (from the transitions API)
+   - Include the state-based options from step 2
+   - Always include: "Add a comment", "Investigate (deep dive)", "Done (back to dashboard)"
+
+4. **Execute the chosen action** (with confirmation). Action loop until user returns to dashboard or exits.
+
 Always include clickable Jira URLs for every issue key.

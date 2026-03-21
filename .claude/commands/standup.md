@@ -23,13 +23,27 @@ Prepare a summary for the weekly standup/grooming meeting.
 
 5. **Display the output** (see Output below).
 
-6. After displaying the sprint board, use `AskUserQuestion` to ask: "Any actions?" with options:
-   - Investigate an item (then ask which #)
-   - Run `/standup-github` for team GitHub activity
-   - Flag an item as blocked
-   - Reassign an item
-   - Publish to GitHub Discussions
-   - No actions needed
+6. **Contextual Actions (Dynamic):**
+
+   After displaying the sprint board, use `AskUserQuestion`: "What would you like to do?" with dynamic options:
+
+   - "Act on a sprint item" — then ask which item number from the tables
+   - "Run `/standup-github`" — for team GitHub activity
+   - "Publish to GitHub Discussions"
+   - "Done (no actions needed)"
+
+   **If user picks an item**, resolve available actions from the API:
+   a. Fetch transitions: `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh transitions <KEY>`
+   b. Check state: has points? blocked? assignee?
+   c. Build dynamic options:
+      - List available transitions by name (from the transitions API)
+      - Is blocked? → "Unflag blocker" : "Flag as blocked"
+      - Has assignee? → "Reassign" : "Assign" (list roster members)
+      - "Set story points" / "Update story points"
+      - "Add a comment"
+      - "Investigate (deep dive)"
+      - "Done (back to standup)"
+   d. Execute with confirmation. Action loop until user returns to standup.
 
 ## Output
 

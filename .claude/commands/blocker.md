@@ -51,4 +51,18 @@ Example: `/blocker OCPNODE-1234` or `/blocker OCPBUGS-65805`
    - Use `AskUserQuestion`: "What's the updated blocked reason?"
    - Update the Blocked Reason field
 
+6. **Contextual follow-up actions (Dynamic):**
+
+   After executing the blocker action, resolve further actions from the API:
+   a. Fetch available transitions: `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh transitions $ARGUMENTS`
+   b. Re-check the issue state (re-fetch: `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh get $ARGUMENTS`)
+   c. Build dynamic options for `AskUserQuestion`: "Any follow-up actions on [$ARGUMENTS]?"
+      - List each available transition by name (from the transitions API)
+      - Has story points? → "Update story points" : "Set story points"
+      - Is now blocked? → "Update blocked reason" / "Unflag blocker"
+      - Is now unblocked? → "Flag as blocked" (if they changed their mind)
+      - Always include: "Add a comment"
+      - Always include: "Done (no action needed)"
+   d. Execute chosen action (with confirmation). Loop until user picks "Done".
+
 Always include clickable Jira URLs.

@@ -34,7 +34,33 @@ Present each section as a table with: key, summary, priority, status, assignee, 
 - Customer escalations
 - New this week
 
-### Action Items
-For each untriaged/unassigned bug, suggest: assign to whom (based on related component/area), suggested priority (based on severity/impact keywords in summary).
+### Contextual Actions (Dynamic)
+
+Present bugs interactively, one category at a time (untriaged, unassigned, blocker proposals, customer escalations, new this week). For each category:
+
+1. Show the table of bugs
+2. Use `AskUserQuestion`: "Which bug would you like to act on?" with item numbers as options + "Skip to next category"
+
+When the user picks a bug, resolve that bug's available actions from the API:
+
+a. **Fetch available transitions:** `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh transitions <KEY>`
+b. **Check current state** from the already-fetched bug data:
+   - Has assignee? → offer "Reassign" : "Assign" (list roster members from both roster files as sub-options)
+   - Is blocked? → offer "Unflag blocker" : "Flag as blocked"
+   - Has SFDC cases? → offer "View customer cases"
+   - Is release blocker proposed? → offer "Approve as release blocker" / "Reject as release blocker"
+   - Has priority set? → offer "Change priority" : "Set priority"
+   - Current sprint? → note; if not in sprint → offer "Add to sprint" (list active/future sprints)
+
+c. **Build dynamic options** for `AskUserQuestion`: "What would you like to do with [KEY]?"
+   - List each available transition by name (from the transitions API)
+   - Include the state-based options from steps b
+   - Always include: "Add a comment", "Investigate (deep dive)", "Skip (back to list)"
+
+d. **Execute the chosen action** (with confirmation via `AskUserQuestion`).
+e. **Action loop:** After executing, re-fetch transitions + state, offer next actions. Continue until user picks "Skip" to return to the category.
+
+After all categories, show the Action Items summary:
+- For each untriaged/unassigned bug, suggest: assign to whom (based on related component/area), suggested priority (based on severity/impact keywords in summary)
 
 Always include clickable Jira URLs.

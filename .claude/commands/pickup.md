@@ -43,9 +43,25 @@ Use `AskUserQuestion`: "Pick up any bugs?" with item numbers as options + "Skip"
 
 Use `AskUserQuestion`: "Pick up any escalations?" with item numbers as options + "Skip".
 
-When the user picks an item:
-1. Show a brief summary (fetch with `bin/jira.sh get <KEY>`)
-2. Use `AskUserQuestion` to confirm: "Assign [KEY] to you (Harshal Patil)?"
-3. If confirmed, assign the issue using the Jira API
+When the user picks an item, resolve that item's available actions from the API:
+
+1. **Fetch the issue:** `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh get <KEY>` — show brief summary
+2. **Fetch available transitions:** `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh transitions <KEY>`
+3. **Check current state:**
+   - Has story points (customfield_10028)? → offer "Set story points after assigning"
+   - Current sprint? → note which sprint it's in
+   - Is blocked? → note blocker status
+
+4. **Build dynamic options** for `AskUserQuestion`: "What would you like to do with [KEY]?"
+   - "Assign to me (Harshal Patil)" — primary action
+   - "Assign to me + set story points" — if no points set
+   - "Assign to me + move to In Progress" — if transition available
+   - List other available transitions by name (from the transitions API)
+   - "Investigate (deep dive)"
+   - "Skip (back to list)"
+
+5. **Execute the chosen action** (with confirmation via `AskUserQuestion` for any write operation).
+
+6. **Action loop:** After assigning, re-fetch transitions and offer follow-up actions (e.g., set points, transition status, add comment). Continue until user picks "Skip" to return to the item list, or "Done" to exit.
 
 Always include clickable Jira URLs for every issue key.

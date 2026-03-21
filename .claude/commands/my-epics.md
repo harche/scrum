@@ -54,8 +54,23 @@ A simple progress bar visualization: `[=========>    ] 65%`
 
 Always include clickable Jira URLs for every issue and epic key.
 
-### Actions
-After presenting epics, use `AskUserQuestion` to ask: "What would you like to do?" with options:
-- Investigate an epic (then ask which #)
-- View a specific child issue
-- No actions needed
+### Contextual Actions (Dynamic)
+
+After presenting epics, use `AskUserQuestion` to ask: "Which epic or item would you like to act on?" with each epic number and child issue number as options, plus "Done (no actions needed)".
+
+When the user picks an item (epic or child issue), resolve available actions from the API:
+
+1. **Fetch available transitions:** `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh transitions <SELECTED-KEY>`
+2. **Check current state** from the already-fetched data:
+   - Has story points (customfield_10028)? → offer "Update story points" : "Set story points"
+   - Is blocked (customfield_10517 set)? → offer "Unflag blocker" : "Flag as blocked"
+   - Has assignee? → offer "Reassign" : "Assign"
+
+3. **Build dynamic options** for `AskUserQuestion`: "What would you like to do with [KEY]?"
+   - List each available transition by name (from the transitions API)
+   - Include the state-based options from step 2
+   - Always include: "Add a comment", "Investigate (deep dive)", "Done (back to epics)"
+
+4. **Execute the chosen action** (with confirmation via `AskUserQuestion` for any write operation).
+
+5. **Action loop:** After executing an action, re-fetch transitions and state, then offer next actions. When the user picks "Done (back to epics)", return to the item selection list. Continue until the user picks "Done (no actions needed)" at the top level.

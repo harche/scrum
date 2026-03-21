@@ -32,10 +32,23 @@ Table per team member:
 - Flag unassigned items
 - Note items without story point estimates
 
-### Rebalancing
-If any imbalances are found (overloaded members, unassigned items, idle members), use `AskUserQuestion` to ask: "Would you like to rebalance workload?" with options:
-- Reassign specific items (then ask which item and to whom)
-- Review a team member's items in detail
-- No changes needed
+### Contextual Actions (Dynamic)
+
+After presenting workload, use `AskUserQuestion`: "What would you like to do?" with dynamic options based on the data:
+
+**If unassigned items exist:** include "Assign unassigned items" as an option
+**If imbalances found (someone has 2x+ average):** include "Rebalance: move items from [overloaded person]"
+**If someone has 0 items:** include "Check on [idle person] — assign work or confirm OOO"
+**Always include:**
+- "Drill into a team member's items" — then ask which member, show their items, and offer per-item actions
+- "Act on a specific item" — then ask which item number
+- "Run /team-member <name>" — to see full activity for a specific person
+- "Done (no changes needed)"
+
+When the user drills into an item, resolve its available actions:
+1. Fetch transitions: `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh transitions <KEY>`
+2. Check state: has points? blocked? assignee?
+3. Build dynamic options: transitions, reassign, set points, flag blocker, add comment
+4. Execute with confirmation. Action loop until user returns.
 
 Always include clickable Jira URLs for in-progress items.

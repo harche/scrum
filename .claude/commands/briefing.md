@@ -74,9 +74,23 @@ Reconstruct a brief timeline from comments and status:
 
 Always include clickable Jira and GitHub URLs.
 
-### Actions
-After presenting context, use `AskUserQuestion` to ask: "What would you like to do?" with options:
-- Update this issue (comment, transition, points)
-- Flag/unflag as blocked
-- Open a linked PR
-- No actions needed
+### Contextual Actions (Dynamic)
+
+After presenting context, resolve available actions from the API:
+
+1. **Fetch available transitions:** `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh transitions $ARGUMENTS`
+2. **Check current state** from the already-fetched issue data:
+   - Has story points (customfield_10028)? → offer "Update story points" : "Set story points"
+   - Is blocked (customfield_10517 set)? → offer "Unflag blocker" : "Flag as blocked"
+   - Has assignee? → offer "Reassign" : "Assign"
+   - Has related GitHub PRs? → offer "View PR #N" for each PR found
+
+3. **Build dynamic options** for `AskUserQuestion`: "What would you like to do with [$ARGUMENTS]?"
+   - List each available transition by name (e.g., "Move to In Progress", "Move to Code Review") — from the transitions API
+   - Include the state-based options from step 2
+   - Always include: "Add a comment"
+   - Always include: "Done (no action needed)"
+
+4. **Execute the chosen action** (with confirmation via `AskUserQuestion` for any write operation).
+
+5. **Action loop:** After executing an action, re-fetch the issue and transitions, then offer the next set of contextual actions. Continue until the user picks "Done".

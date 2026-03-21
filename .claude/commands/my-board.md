@@ -50,9 +50,23 @@ Group into tables by status category. Each table has: #, Key (clickable), Type, 
 
 Always include clickable Jira URLs for every issue key.
 
-### Actions
-After presenting the board, use `AskUserQuestion` to ask: "What would you like to do?" with options:
-- Investigate an item (then ask which #)
-- Update an item (comment, transition, or set points)
-- Flag/unflag a blocker
-- No actions needed
+### Contextual Actions (Dynamic)
+
+After presenting the board, use `AskUserQuestion` to ask: "Which item would you like to act on?" with each item number as an option, plus "Done (no actions needed)".
+
+When the user picks an item, resolve that item's available actions from the API:
+
+1. **Fetch available transitions:** `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh transitions <SELECTED-KEY>`
+2. **Check current state** from the already-fetched sprint data:
+   - Has story points (customfield_10028)? → offer "Update story points" : "Set story points"
+   - Is blocked (customfield_10517 set)? → offer "Unflag blocker" : "Flag as blocked"
+   - Has assignee? → offer "Reassign" : "Assign"
+
+3. **Build dynamic options** for `AskUserQuestion`: "What would you like to do with [KEY]?"
+   - List each available transition by name (from the transitions API)
+   - Include the state-based options from step 2
+   - Always include: "Add a comment", "Investigate (deep dive)", "Done (back to board)"
+
+4. **Execute the chosen action** (with confirmation via `AskUserQuestion` for any write operation).
+
+5. **Action loop:** After executing an action, re-fetch transitions and state, then offer next actions. When the user picks "Done (back to board)", return to the item selection list to act on another item. Continue until the user picks "Done (no actions needed)" at the top level.

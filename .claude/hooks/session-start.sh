@@ -3,6 +3,8 @@
 cat <<'EOF'
 IMPORTANT: Display the following command list exactly as-is to the user in your first response. Do not summarize or abbreviate — show every command.
 
+Every command offers contextual follow-up actions based on actual API state (Jira transitions, GitHub PR status, field values). Pick an item, act on it, and keep going.
+
 Scrum Master commands:
   /sprint-status        — Current sprint dashboard
   /standup              — Weekly standup prep (Tuesdays)
