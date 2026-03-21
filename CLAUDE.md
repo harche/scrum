@@ -57,15 +57,6 @@ bin/jira.sh comment <body> <ISSUE-KEY> [<ISSUE-KEY>...]
 
 All output is JSON. `bin/jira.sh` uses the Agile REST API (`/rest/agile/1.0/`) for sprint and sprint-issues queries, and REST API v3 (`/rest/api/3/`) for everything else. Use `python3` or `jq` to parse and format.
 
-**Self-Improvement Protocol:** When `bin/jira.sh` or any workspace tool returns an unexpected error (HTTP 400/401/403/500, bash errors, empty results for queries that should have data), do NOT silently work around it with raw commands. Instead:
-1. **Diagnose** — read the relevant function in `bin/jira.sh` (or the failing tool) and identify the root cause
-2. **Draft a fix** — write the code change that would prevent this class of error
-3. **Present** — show the user the problem observed and proposed fix via `AskUserQuestion` (e.g., "I hit error X because jira.sh lacks Y. Here's the fix: ... Apply it?")
-4. **Apply** — only if the user approves, edit the tool code and update `CLAUDE.md` if the command signature changed
-5. **Verify** — re-run the original operation to confirm the fix works
-
-This also applies to empty results: if `bin/jira.sh` returns `{"values": []}` or `{"issues": []}` for a query that should have data, fall back to the other API (Agile ↔ REST v3) to verify, and fix the tool if the fallback succeeds.
-
 **ADF format:** API v3 returns `description` and comment `body` fields in Atlassian Document Format (ADF — a nested JSON structure), not plain text. To extract readable text, recursively walk ADF nodes: collect `text` from nodes with `type: "text"`, and add newlines after `paragraph`, `heading`, `listItem`, `blockquote`, and `hardBreak` nodes.
 
 ## Board & Sprint Info

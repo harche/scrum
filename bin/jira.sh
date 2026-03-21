@@ -13,7 +13,10 @@ BOARD_ID="${JIRA_BOARD_ID:-7845}"
 JIRA_API_TOKEN=$(security find-generic-password -s "JIRA_API_TOKEN" -w 2>/dev/null) || {
   echo '{"error": "JIRA_API_TOKEN not found in Keychain"}' >&2; exit 1
 }
-JIRA_USER=$(security find-generic-password -s "JIRA_API_TOKEN" -a "" -g 2>&1 | grep "acct" | sed 's/.*="//;s/"//' 2>/dev/null) || true
+JIRA_USER=$(security find-generic-password -s "JIRA_API_TOKEN" -g 2>&1 | grep "acct" | sed 's/.*="//;s/"//' 2>/dev/null) || true
+if [[ -n "$JIRA_USER" && ! "$JIRA_USER" =~ "@" ]]; then
+  JIRA_USER="${JIRA_USER}@redhat.com"
+fi
 if [[ -z "$JIRA_USER" ]]; then
   JIRA_USER="${JIRA_EMAIL:-$(git config user.email 2>/dev/null || echo "")}"
 fi
