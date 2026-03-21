@@ -44,6 +44,15 @@ bin/jira.sh set-points <ISSUE-KEY> <points>
 
 # Get available transitions for an issue
 bin/jira.sh transitions <ISSUE-KEY>
+
+# Perform a transition on one or more issues
+bin/jira.sh transition <transitionId> <ISSUE-KEY> [<ISSUE-KEY>...]
+
+# Close one or more issues (optional comment + transition to Closed)
+bin/jira.sh close [comment] <ISSUE-KEY> [<ISSUE-KEY>...]
+
+# Add a comment to one or more issues
+bin/jira.sh comment <body> <ISSUE-KEY> [<ISSUE-KEY>...]
 ```
 
 All output is JSON. `bin/jira.sh` uses the Agile REST API (`/rest/agile/1.0/`) for sprint and sprint-issues queries, and REST API v3 (`/rest/api/3/`) for everything else. Use `python3` or `jq` to parse and format.

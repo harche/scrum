@@ -88,9 +88,28 @@ cmd_transitions() {
   _curl "${JIRA_BASE}/rest/api/3/issue/${key}/transitions"
 }
 
+cmd_transition() {
+  local transition_id="$1"
+  shift
+  local keys=("$@")
+  for key in "${keys[@]}"; do
+    local result
+    result=$(_curl -X POST "${JIRA_BASE}/rest/api/3/issue/${key}/transitions" \
+      -d "{\"transition\":{\"id\":\"${transition_id}\"}}" -w "\nHTTP_%{http_code}" 2>&1)
+    local code
+    code=$(echo "$result" | grep "HTTP_" | sed 's/HTTP_//')
+    if [[ "$code" == "204" ]]; then
+      echo "{\"key\":\"${key}\",\"status\":\"ok\"}"
+    else
+      echo "{\"key\":\"${key}\",\"status\":\"error\",\"code\":\"${code}\"}" >&2
+    fi
+  done
+}
+
 cmd_comment() {
-  local key="$1"
-  local body="$2"
+  local body="$1"
+  shift
+  local keys=("$@")
   local payload
   payload=$(python3 -c "
 import json, sys
@@ -103,7 +122,40 @@ print(json.dumps({
   }
 }))
 " "$body")
-  _curl -X POST "${JIRA_BASE}/rest/api/3/issue/${key}/comment" -d "$payload"
+  for key in "${keys[@]}"; do
+    local result
+    result=$(_curl -X POST "${JIRA_BASE}/rest/api/3/issue/${key}/comment" -d "$payload" -w "\nHTTP_%{http_code}" 2>&1)
+    local code
+    code=$(echo "$result" | grep "HTTP_" | sed 's/HTTP_//')
+    if [[ "$code" == "201" ]]; then
+      echo "{\"key\":\"${key}\",\"status\":\"ok\"}"
+    else
+      echo "{\"key\":\"${key}\",\"status\":\"error\",\"code\":\"${code}\"}" >&2
+    fi
+  done
+}
+
+cmd_close() {
+  local comment=""
+  local keys=()
+  # First arg is optional comment (if it doesn't look like an issue key)
+  if [[ $# -ge 1 && ! "$1" =~ ^[A-Z]+-[0-9]+$ ]]; then
+    comment="$1"
+    shift
+  fi
+  keys=("$@")
+  if [[ ${#keys[@]} -eq 0 ]]; then
+    echo '{"error":"No issue keys provided"}' >&2
+    return 1
+  fi
+  for key in "${keys[@]}"; do
+    # Add comment if provided
+    if [[ -n "$comment" ]]; then
+      cmd_comment "$comment" "$key" > /dev/null
+    fi
+    # Transition to Closed (ID 51)
+    cmd_transition 51 "$key"
+  done
 }
 
 cmd_set_points() {
@@ -134,8 +186,10 @@ Commands:
   move-to-sprint <sprintId> <KEY...> Move issue(s) to a sprint
   set-points <ISSUE-KEY> <points>   Set story points on an issue
   comments <ISSUE-KEY>        List comments on an issue
-  comment <ISSUE-KEY> <body>   Add a comment to an issue
+  comment <body> <KEY...>     Add a comment to one or more issues
   transitions <ISSUE-KEY>     Get available transitions
+  transition <id> <KEY...>    Perform a transition on one or more issues
+  close [comment] <KEY...>    Comment (optional) + close one or more issues
 
 Notes:
   - Uses Agile API for sprints/sprint-issues, REST API v3 for everything else
@@ -169,10 +223,12 @@ case "${1:-help}" in
   sprints)        cmd_sprints "${2:-active}" ;;
   sprint-issues)  cmd_sprint_issues "${2:?Sprint ID required}" "${3:-100}" ;;
   comments)       cmd_comments "${2:?ISSUE-KEY required}" ;;
-  comment)        cmd_comment "${2:?ISSUE-KEY required}" "${3:?Comment body required}" ;;
+  comment)        cmd_comment "${2:?Comment body required}" "${@:3}" ;;
   move-to-sprint) cmd_move_to_sprint "${2:?Sprint ID required}" "${@:3}" ;;
   set-points)     cmd_set_points "${2:?ISSUE-KEY required}" "${3:?Story points required}" ;;
   transitions)    cmd_transitions "${2:?ISSUE-KEY required}" ;;
+  transition)     cmd_transition "${2:?Transition ID required}" "${@:3}" ;;
+  close)          cmd_close "${@:2}" ;;
   help|--help|-h) cmd_help ;;
   *)              echo "Unknown command: $1" >&2; cmd_help >&2; exit 1 ;;
 esac
