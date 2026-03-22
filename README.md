@@ -68,7 +68,7 @@ Requires:
 
 Each command follows a **show → select → act → loop** pattern:
 
-1. **Show** — Calls a single composite command that parallelizes all API calls internally and returns pre-computed JSON
+1. **Show** — Calls a single composite command that parallelizes API calls internally and returns pre-computed JSON. Jira composites use optimized **JQL** queries — fetching broad datasets in few calls and categorizing client-side in Python (e.g., `bug-overview` categorizes all open bugs in 3 queries instead of 7). GitHub composites use **GraphQL** batching — each command makes a single GraphQL call instead of multiple REST calls, and `team-prs` batches members in groups of 6.
 2. **Select** — Asks which item to act on (numbered for easy reference)
 3. **Act** — Queries the API for available actions on that item:
    - **Jira:** Fetches actual transitions, checks field state (story points, blocked status, assignee, customer cases)
