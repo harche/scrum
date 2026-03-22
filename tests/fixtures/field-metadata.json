@@ -1,0 +1,21 @@
+[
+  {"id": "summary", "name": "Summary", "custom": false, "schema": {"type": "string"}},
+  {"id": "status", "name": "Status", "custom": false, "schema": {"type": "status"}},
+  {"id": "assignee", "name": "Assignee", "custom": false, "schema": {"type": "user"}},
+  {"id": "priority", "name": "Priority", "custom": false, "schema": {"type": "priority"}},
+  {"id": "issuetype", "name": "Issue Type", "custom": false, "schema": {"type": "issuetype"}},
+  {"id": "fixVersions", "name": "Fix versions", "custom": false, "schema": {"type": "array"}},
+  {"id": "components", "name": "Component/s", "custom": false, "schema": {"type": "array"}},
+  {"id": "updated", "name": "Updated", "custom": false, "schema": {"type": "datetime"}},
+  {"id": "created", "name": "Created", "custom": false, "schema": {"type": "datetime"}},
+  {"id": "customfield_10020", "name": "Sprint", "custom": true, "schema": {"type": "array"}},
+  {"id": "customfield_10028", "name": "Story Points", "custom": true, "schema": {"type": "number"}},
+  {"id": "customfield_10014", "name": "Epic Link", "custom": true, "schema": {"type": "any"}},
+  {"id": "customfield_10855", "name": "Target Version", "custom": true, "schema": {"type": "array"}},
+  {"id": "customfield_10847", "name": "Release Blocker", "custom": true, "schema": {"type": "option"}},
+  {"id": "customfield_10978", "name": "SFDC Cases Counter", "custom": true, "schema": {"type": "string"}},
+  {"id": "customfield_10979", "name": "SFDC Cases Links", "custom": true, "schema": {"type": "string"}},
+  {"id": "customfield_10840", "name": "Severity", "custom": true, "schema": {"type": "option"}},
+  {"id": "customfield_10517", "name": "Blocked", "custom": true, "schema": {"type": "option"}},
+  {"id": "customfield_10483", "name": "Blocked Reason", "custom": true, "schema": {"type": "string"}}
+]

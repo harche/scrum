@@ -220,6 +220,56 @@ for b in d['allOpen']:
 "
 }
 
+@test "bug-overview: categorizes untriaged bugs (Undefined priority)" {
+  run cmd_bug_overview "Node Devices"
+  echo "$output" | python3 -c "
+import json, sys
+d = json.load(sys.stdin)
+untriaged_keys = [b['key'] for b in d['untriaged']]
+assert 'OCPBUGS-99001' in untriaged_keys, f'OCPBUGS-99001 (Undefined priority) should be untriaged, got: {untriaged_keys}'
+assert d['summary']['untriaged'] >= 1
+"
+}
+
+@test "bug-overview: categorizes unassigned bugs" {
+  run cmd_bug_overview "Node Devices"
+  echo "$output" | python3 -c "
+import json, sys
+d = json.load(sys.stdin)
+unassigned_keys = [b['key'] for b in d['unassigned']]
+assert 'OCPBUGS-99001' in unassigned_keys, f'OCPBUGS-99001 (null assignee) should be unassigned, got: {unassigned_keys}'
+assert d['summary']['unassigned'] >= 1
+"
+}
+
+@test "bug-overview: categorizes blocker proposals from releaseBlocker dict" {
+  run cmd_bug_overview "Node Devices"
+  echo "$output" | python3 -c "
+import json, sys
+d = json.load(sys.stdin)
+proposal_keys = [b['key'] for b in d['blockerProposals']]
+assert 'OCPBUGS-99002' in proposal_keys, f'OCPBUGS-99002 (releaseBlocker Proposed) should be a blocker proposal, got: {proposal_keys}'
+assert d['summary']['blockerProposals'] >= 1
+"
+}
+
+@test "bug-overview: categorizes customer escalations from sfdcCaseCount" {
+  run cmd_bug_overview "Node Devices"
+  echo "$output" | python3 -c "
+import json, sys
+d = json.load(sys.stdin)
+escalation_keys = [b['key'] for b in d['customerEscalations']]
+assert 'OCPBUGS-99003' in escalation_keys, f'OCPBUGS-99003 (has sfdcCaseCount) should be an escalation, got: {escalation_keys}'
+assert d['summary']['customerEscalations'] >= 1
+"
+}
+
+@test "bug-overview: no shape warnings on stderr for valid data" {
+  run cmd_bug_overview "Node Devices"
+  [[ "$stderr" != *"SHAPE WARNING"* ]] || [[ -z "$stderr" ]]
+  [[ "$stderr" != *"CANARY"* ]] || [[ -z "$stderr" ]]
+}
+
 # ── carryover-report ───────────────────────────────────────────────────────────
 
 @test "carryover-report: valid JSON with all keys" {
@@ -360,6 +410,21 @@ assert sm['escalations'] == len(d['customerEscalations'])
 "
 }
 
+@test "pickup-data: identifies escalations from sfdcCaseCount" {
+  run cmd_pickup_data "Node Devices"
+  echo "$output" | python3 -c "
+import json, sys
+d = json.load(sys.stdin)
+escalation_keys = [b['key'] for b in d['customerEscalations']]
+# OCPBUGS-99003 has sfdcCaseCount set — should appear as escalation
+assert 'OCPBUGS-99003' in escalation_keys, f'Expected OCPBUGS-99003 in escalations, got: {escalation_keys}'
+# Escalations should be a subset of unassigned bugs
+bug_keys = {b['key'] for b in d['unassignedBugs']}
+for ek in escalation_keys:
+    assert ek in bug_keys, f'Escalation {ek} not in unassigned bugs'
+"
+}
+
 @test "pickup-data: finds unassigned sprint items from fixture" {
   run cmd_pickup_data "Node Devices"
   echo "$output" | python3 -c "
@@ -369,6 +434,56 @@ d = json.load(sys.stdin)
 unassigned_keys = [i['key'] for i in d['unassignedSprintItems']]
 assert 'OCPNODE-1003' in unassigned_keys, f'Expected OCPNODE-1003 in unassigned, got: {unassigned_keys}'
 "
+}
+
+# ── release-data categorization ───────────────────────────────────────────
+
+@test "release-data: categorizes approved and proposed blockers" {
+  run cmd_release_data "Node Devices" "4.20"
+  assert_valid_json "$output"
+  echo "$output" | python3 -c "
+import json, sys
+d = json.load(sys.stdin)
+# Fixture has OCPBUGS-99002 with Proposed, OCPBUGS-99003 with Approved
+proposed_keys = [b['key'] for b in d['proposedBlockers']]
+approved_keys = [b['key'] for b in d['approvedBlockers']]
+assert 'OCPBUGS-99002' in proposed_keys, f'Expected OCPBUGS-99002 in proposed, got: {proposed_keys}'
+assert 'OCPBUGS-99003' in approved_keys, f'Expected OCPBUGS-99003 in approved, got: {approved_keys}'
+assert d['summary']['proposedBlockers'] >= 1
+assert d['summary']['approvedBlockers'] >= 1
+"
+}
+
+@test "release-data: openBugs includes releaseBlocker field" {
+  run cmd_release_data "Node Devices" "4.20"
+  echo "$output" | python3 -c "
+import json, sys
+d = json.load(sys.stdin)
+for b in d['openBugs']:
+    assert 'releaseBlocker' in b, f'{b[\"key\"]} missing releaseBlocker field'
+"
+}
+
+# ── standup-data recentlyUpdatedKeys ──────────────────────────────────────
+
+@test "standup-data: derives recentlyUpdatedKeys from updated field" {
+  run cmd_standup_data "Node Devices"
+  echo "$output" | python3 -c "
+import json, sys
+d = json.load(sys.stdin)
+assert 'recentlyUpdatedKeys' in d, 'Missing recentlyUpdatedKeys'
+rk = d['recentlyUpdatedKeys']
+# Fixture: OCPNODE-1001 and OCPNODE-1002 have updated=2099 (always recent)
+# OCPNODE-1003 has updated=2020 (always old)
+assert 'OCPNODE-1001' in rk, f'OCPNODE-1001 (recent) should be in recentlyUpdatedKeys: {rk}'
+assert 'OCPNODE-1002' in rk, f'OCPNODE-1002 (recent) should be in recentlyUpdatedKeys: {rk}'
+assert 'OCPNODE-1003' not in rk, f'OCPNODE-1003 (old) should NOT be in recentlyUpdatedKeys: {rk}'
+"
+}
+
+@test "standup-data: no shape warnings on stderr for valid data" {
+  run cmd_standup_data "Node Devices"
+  [[ "$stderr" != *"SHAPE WARNING"* ]] || [[ -z "$stderr" ]]
 }
 
 # ── my-standup-data ────────────────────────────────────────────────────────────

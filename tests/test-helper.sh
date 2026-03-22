@@ -53,6 +53,8 @@ _mock_curl() {
         echo '{}'; printf '\nHTTP_204'
       fi
       ;;
+    */field)
+      cat "$FIXTURES/field-metadata.json" ;;
     *)
       echo "{\"error\":\"Mock: unrecognized URL: ${url}\"}" >&2
       return 1
@@ -78,6 +80,7 @@ load_all_mocked() {
   source "${PROJECT_ROOT}/bin/lib/api/comment.sh"
   source "${PROJECT_ROOT}/bin/lib/api/transition.sh"
   source "${PROJECT_ROOT}/bin/lib/api/fields.sh"
+  source "${PROJECT_ROOT}/bin/lib/api/health.sh"
   source "${PROJECT_ROOT}/bin/lib/util/cache.sh"
   source "${PROJECT_ROOT}/bin/lib/team.sh"
 }

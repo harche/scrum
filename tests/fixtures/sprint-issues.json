@@ -18,7 +18,8 @@
         "customfield_10014": "OCPNODE-900",
         "customfield_10517": {"value": "False"},
         "customfield_10483": {"type": "doc", "version": 1, "content": [{"type": "paragraph", "content": [{"type": "text", "text": "None"}]}]},
-        "customfield_10847": null
+        "customfield_10847": null,
+        "updated": "2099-01-01T00:00:00.000+0000"
       }
     },
     {
@@ -35,7 +36,8 @@
         "customfield_10014": null,
         "customfield_10517": {"value": "True"},
         "customfield_10483": {"type": "doc", "version": 1, "content": [{"type": "paragraph", "content": [{"type": "text", "text": "Waiting on upstream fix"}]}]},
-        "customfield_10847": "Proposed"
+        "customfield_10847": {"self": "https://example.com/rest/api/3/customFieldOption/16773", "value": "Proposed", "id": "16773"},
+        "updated": "2099-01-01T00:00:00.000+0000"
       }
     },
     {
@@ -52,7 +54,8 @@
         "customfield_10014": null,
         "customfield_10517": {"value": "False"},
         "customfield_10483": {"type": "doc", "version": 1, "content": [{"type": "paragraph", "content": [{"type": "text", "text": "None"}]}]},
-        "customfield_10847": null
+        "customfield_10847": null,
+        "updated": "2020-01-01T00:00:00.000+0000"
       }
     }
   ]

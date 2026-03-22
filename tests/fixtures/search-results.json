@@ -6,15 +6,18 @@
         "summary": "Pod fails to start with DRA enabled",
         "status": {"name": "NEW", "statusCategory": {"key": "new", "name": "To Do"}},
         "assignee": null,
-        "priority": {"name": "Critical"},
+        "priority": {"name": "Undefined"},
         "issuetype": {"name": "Bug"},
         "fixVersions": [],
+        "components": [{"name": "Node / Device Manager"}],
         "customfield_10020": [],
         "customfield_10028": null,
         "customfield_10014": null,
         "customfield_10517": {"value": "False"},
         "customfield_10483": null,
-        "customfield_10847": null
+        "customfield_10847": null,
+        "customfield_10978": null,
+        "updated": "2099-01-01T00:00:00.000+0000"
       }
     },
     {
@@ -26,12 +29,35 @@
         "priority": {"name": "Major"},
         "issuetype": {"name": "Bug"},
         "fixVersions": [{"name": "4.20"}],
+        "components": [{"name": "Node / Instaslice-operator"}],
         "customfield_10020": [{"id": 6171, "name": "OCP Node Devices Sprint 285", "state": "active"}],
         "customfield_10028": 2.0,
         "customfield_10014": null,
         "customfield_10517": {"value": "False"},
         "customfield_10483": null,
-        "customfield_10847": null
+        "customfield_10847": {"self": "https://example.com/rest/api/3/customFieldOption/16773", "value": "Proposed", "id": "16773"},
+        "customfield_10978": null,
+        "updated": "2099-01-01T00:00:00.000+0000"
+      }
+    },
+    {
+      "key": "OCPBUGS-99003",
+      "fields": {
+        "summary": "GPU allocation fails under memory pressure",
+        "status": {"name": "ASSIGNED", "statusCategory": {"key": "indeterminate", "name": "In Progress"}},
+        "assignee": {"displayName": "Bob Jones", "emailAddress": "bob@example.com"},
+        "priority": {"name": "Critical"},
+        "issuetype": {"name": "Bug"},
+        "fixVersions": [{"name": "4.20"}],
+        "components": [{"name": "Node / Device Manager"}],
+        "customfield_10020": [{"id": 6171, "name": "OCP Node Devices Sprint 285", "state": "active"}],
+        "customfield_10028": 3.0,
+        "customfield_10014": null,
+        "customfield_10517": {"value": "False"},
+        "customfield_10483": null,
+        "customfield_10847": {"self": "https://example.com/rest/api/3/customFieldOption/16772", "value": "Approved", "id": "16772"},
+        "customfield_10978": "encrypted-sfdc-id-abc123",
+        "updated": "2099-01-01T00:00:00.000+0000"
       }
     }
   ],
