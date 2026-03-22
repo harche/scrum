@@ -2,61 +2,38 @@ Show all bugs assigned to me, sorted by severity, age, and customer impact.
 
 ## Steps
 
-1. **Team Selection:** Use `AskUserQuestion` to ask which team (see "Team Selection" in CLAUDE.md). Use the selected team's bug components for all queries.
+1. **Team Selection:** Use `AskUserQuestion` to ask which team (see "Team Selection" in CLAUDE.md).
 
-2. **My open bugs:**
-   `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh search 'project = OCPBUGS AND component in (<team bug components>) AND assignee = "harpatil@redhat.com" AND status not in (CLOSED, Verified, Done) ORDER BY priority ASC, created ASC'`
+2. **Fetch my bugs data:**
+   `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh my-bugs-data "<team>"`
 
-3. **Check for customer escalations** among my bugs:
-   Look for issues with SFDC Cases Counter (customfield_10978) populated.
+   Returns: `team`, `summary` (total, byPriority, customerEscalations, releaseBlockers), `customerEscalations[]`, `releaseBlockers[]`, `allBugs[]` (each with key, summary, status, priority, points, fixVersions, blocked, sfdcCaseCount, releaseBlocker).
 
-4. **Check for release blocker flags:**
-   Look for issues with Release Blocker (customfield_10847) set.
+3. Render tables directly from the returned JSON.
 
 ## Output
 
-### My Bugs — [Team Name]
+### My Bugs — `team`
 
 ### Summary
-- Total open bugs assigned to me
-- By priority: Blocker / Critical / Major / Normal / Minor / Undefined
-- Customer escalations count
-- Release blocker proposals count
+From `summary`: total, by priority breakdown, escalations count, release blockers count.
 
-### Customer Escalations (if any)
-| # | Key | Summary | Priority | Status | Severity | Cases |
-|---|-----|---------|----------|--------|----------|-------|
+### Customer Escalations (if `customerEscalations` non-empty)
+| # | Key | Summary | Priority | Status | Cases |
 
-### Release Blockers (if any)
+### Release Blockers (if `releaseBlockers` non-empty)
 | # | Key | Summary | Priority | Status | Blocker Flag |
-|---|-----|---------|----------|--------|-------------|
 
-### All My Bugs
-| # | Key | Summary | Priority | Status | Age (days) | Target Version |
-|---|-----|---------|----------|--------|------------|----------------|
+### All My Bugs (from `allBugs`)
+| # | Key | Summary | Priority | Status | Fix Version |
 
-Sort by: priority (Blocker first), then by age (oldest first).
-
-Always include clickable Jira URLs for every issue key.
+Always include clickable Jira URLs.
 
 ### Contextual Actions (Dynamic)
 
-After presenting bugs, use `AskUserQuestion` to ask: "Which bug would you like to act on?" with each item number as an option, plus "Done (no actions needed)".
+Use `AskUserQuestion`: "Which bug to act on?" with item numbers + "Done".
 
-When the user picks a bug, resolve that bug's available actions from the API:
-
-1. **Fetch available transitions:** `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh transitions <SELECTED-KEY>`
-2. **Check current state** from the already-fetched bug data:
-   - Is blocked (customfield_10517 set)? → offer "Unflag blocker" : "Flag as blocked"
-   - Has SFDC cases (customfield_10978)? → offer "View customer cases"
-   - Is release blocker (customfield_10847)? → note in the options
-   - Current status determines available flow (NEW→ASSIGNED→POST→Modified→ON_QA→Verified→CLOSED)
-
-3. **Build dynamic options** for `AskUserQuestion`: "What would you like to do with [KEY]?"
-   - List each available transition by name (from the transitions API, e.g., "Move to ASSIGNED", "Move to POST")
-   - Include the state-based options from step 2
-   - Always include: "Add a comment", "Investigate (deep dive)", "Done (back to bug list)"
-
-4. **Execute the chosen action** (with confirmation via `AskUserQuestion` for any write operation).
-
-5. **Action loop:** After executing an action, re-fetch transitions and state, then offer next actions. When the user picks "Done (back to bug list)", return to the bug selection list. Continue until the user picks "Done (no actions needed)" at the top level.
+When user picks a bug:
+1. Fetch transitions: `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh transitions <KEY>`
+2. Build dynamic options from transitions + state
+3. Execute with confirmation. Action loop until done.

@@ -4,59 +4,33 @@ The user's GitHub handle is `harche` (from roster files).
 
 ## Steps
 
-Run these queries **in parallel:**
+1. **Fetch review queue data:**
+   `bin/gh-activity.sh review-queue harche`
 
-1. **PRs requesting my review (directly):**
-   ```
-   gh search prs --review-requested=harche --state=open --sort=updated --limit=30 --json repository,title,url,author,createdAt,updatedAt,labels
-   ```
+   Returns: `reviewRequested[]` (sorted oldest first, with repo, title, url, author, ageDays, isDraft), `mentioned[]`, `summary` (reviewRequested, mentioned counts).
 
-2. **PRs where I'm mentioned but haven't reviewed yet:**
-   ```
-   gh search prs --mentions=harche --state=open --sort=updated --limit=10 --json repository,title,url,author,createdAt,updatedAt
-   ```
+2. Render directly from the returned JSON.
 
 ## Output
 
-### Review Queue — @harche
+### Review Queue
 
 ### Summary
-- Total PRs awaiting my review: N
-- Oldest: X days
-- By repo: repo1 (N), repo2 (N)
+From `summary`: review requested count, mentioned count.
 
-### PRs Needing My Review
-| # | Repo | Title | Author | Age (days) | Priority | URL |
-|---|------|-------|--------|------------|----------|-----|
+### PRs Requesting My Review (from `reviewRequested[]`, sorted oldest first)
+| # | Repo | Title | Author | Age (days) | Draft? | URL |
 
-Priority is determined by:
-- **High**: Age > 5 days, or from a team member (match author against roster files)
-- **Medium**: Age 2-5 days
-- **Low**: Age < 2 days
-
-Sort by priority (high first), then age (oldest first).
-
-### Mentioned (may need attention)
-| # | Repo | Title | Author | Age | URL |
-|---|------|-------|--------|-----|-----|
-
-Only show PRs not already in the review-requested list above.
+### Mentioned (from `mentioned[]`)
+| # | Repo | Title | Author | URL |
 
 Always include clickable GitHub URLs.
 
 ### Contextual Actions (Dynamic)
 
-After presenting the queue, use `AskUserQuestion`: "Which PR would you like to act on?" with each PR number as an option, plus "Done (finished reviewing queue)".
+Use `AskUserQuestion`: "Which PR to review?" with numbers + "Done".
 
-When the user picks a PR, resolve its available actions from the GitHub API:
-
-1. **Fetch PR details:** `gh pr view <PR-URL> --json state,reviewDecision,statusCheckRollup,isDraft,mergeable,additions,deletions,changedFiles`
-2. **Build dynamic options** based on the PR's current state:
-   - **If checks passing:** "Approve this PR", "Approve and merge"
-   - **If checks failing:** "View failing checks", "Comment about failing checks"
-   - **If draft:** "Comment (PR is still draft)"
-   - Always include: "Add a review comment", "Request changes", "View diff summary" (`gh pr diff <PR-URL> --stat`), "Open in browser", "Done (back to queue)"
-
-3. **Execute the chosen action** (with confirmation via `AskUserQuestion` for any write operation).
-
-4. **Action loop:** After executing an action, re-fetch PR state and offer updated actions. Continue until user picks "Done (back to queue)". Then return to PR selection.
+When user picks a PR:
+1. Fetch state: `gh pr view <URL> --json state,reviewDecision,statusCheckRollup,isDraft,mergeable,additions,deletions`
+2. Build options: "Start review", "Approve", "Request changes", "View diff", "Open in browser", "Done"
+3. Execute with confirmation. Action loop until done.

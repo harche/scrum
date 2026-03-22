@@ -2,28 +2,20 @@ Show workload distribution across the team.
 
 ## Steps
 
-1. **Team Selection:** Use `AskUserQuestion` to ask which team (see "Team Selection" in CLAUDE.md). Use the selected team's sprint filter and roster file for all subsequent steps.
+1. **Team Selection:** Use `AskUserQuestion` to ask which team (see "Team Selection" in CLAUDE.md). Use the selected team name for the composite command.
 
-2. Find the active sprint for the selected team:
-   `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh sprints active` — filter for the team's sprint name pattern.
+2. **Fetch all sprint data in one call:**
+   `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh sprint-dashboard "<team>"`
 
-3. Get all sprint issues:
-   `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh sprint-issues <sprintId>`
+   This returns: `sprint`, `summary`, `byStatus`, `teamWorkload` (per-member breakdown: toDo, inProgress, codeReview, done, total, pointsDone, pointsTotal), `roster` (all roster members with hasItems flag).
 
-4. Load the **team roster** from the selected team's roster file.
-   Every roster member gets a row — not just sprint assignees. Members with 0 assigned items should still appear (they may be available or OOO).
-
-4. Group by roster member and compute:
-   - Total items assigned
-   - Items by status (To Do, In Progress, Code Review, Done)
-   - Total story points assigned
-   - Story points completed (Done/Closed items)
+3. Every roster member gets a row — not just sprint assignees. Members with 0 assigned items should still appear (from `roster` with `hasItems: false`).
 
 ## Output
 
 ### Team Workload — [Sprint Name]
 
-Table per team member:
+Table per team member (from `teamWorkload` + `roster`):
 | Member | To Do | In Progress | Review | Done | Total | Points (done/total) |
 
 ### Observations

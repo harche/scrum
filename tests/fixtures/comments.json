@@ -1,0 +1,44 @@
+{
+  "startAt": 0,
+  "maxResults": 50,
+  "total": 3,
+  "comments": [
+    {
+      "id": "100001",
+      "author": {"displayName": "Alice Smith", "emailAddress": "alice@example.com"},
+      "created": "2026-03-10T10:00:00.000+0000",
+      "body": {
+        "type": "doc",
+        "version": 1,
+        "content": [
+          {"type": "paragraph", "content": [{"type": "text", "text": "Started working on this."}]}
+        ]
+      }
+    },
+    {
+      "id": "100002",
+      "author": {"displayName": "Bob Jones", "emailAddress": "bob@example.com"},
+      "created": "2026-03-15T14:30:00.000+0000",
+      "body": {
+        "type": "doc",
+        "version": 1,
+        "content": [
+          {"type": "paragraph", "content": [{"type": "text", "text": "Review comments addressed."}]},
+          {"type": "paragraph", "content": [{"type": "text", "text": "Ready for final review."}]}
+        ]
+      }
+    },
+    {
+      "id": "100003",
+      "author": {"displayName": "Alice Smith", "emailAddress": "alice@example.com"},
+      "created": "2026-03-20T09:00:00.000+0000",
+      "body": {
+        "type": "doc",
+        "version": 1,
+        "content": [
+          {"type": "paragraph", "content": [{"type": "text", "text": "Merged and verified."}]}
+        ]
+      }
+    }
+  ]
+}

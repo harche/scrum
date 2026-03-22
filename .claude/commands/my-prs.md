@@ -4,75 +4,42 @@ The user's GitHub handle is `harche` (from roster files).
 
 ## Steps
 
-Run these queries **in parallel:**
+1. **Fetch all PR data:**
+   `bin/gh-activity.sh my-prs harche`
 
-1. **My authored PRs (open):**
-   ```
-   gh search prs --author=harche --state=open --sort=updated --limit=30 --json repository,title,state,url,updatedAt,createdAt,reviewDecision,statusCheckRollup
-   ```
+   Returns: `authoredOpen[]` (with repo, title, state, url, reviewDecision, isDraft), `authoredMerged[]` (recently merged), `reviewRequested[]` (PRs requesting my review), `summary` (openPRs, recentlyMerged, reviewRequests counts).
 
-2. **My recently merged PRs (last 14 days):**
-   ```
-   gh search prs --author=harche --merged --sort=updated --limit=10 --json repository,title,url,updatedAt
-   ```
-
-3. **PRs requesting my review:**
-   ```
-   gh search prs --review-requested=harche --state=open --sort=updated --limit=20 --json repository,title,url,author,createdAt,updatedAt
-   ```
+2. Render directly from the returned JSON.
 
 ## Output
 
-### My PRs — @harche
+### My PRs
 
 ### Summary
-- Open PRs: N
-- Awaiting review: N (no approvals yet)
-- Approved & ready to merge: N
-- Changes requested: N
-- Recently merged (14d): N
-- Review requests pending from me: N
+From `summary`: open PRs, recently merged (7d), review requests for me.
 
-### Open PRs (Authored)
-| # | Repo | Title | Review Status | CI | Age | URL |
-|---|------|-------|--------------|-----|-----|-----|
+### My Open PRs (from `authoredOpen[]`)
+| # | Repo | Title | Review Status | Draft? | URL |
 
-Review Status: APPROVED / CHANGES_REQUESTED / REVIEW_REQUIRED / PENDING
-CI: passing / failing / pending (from statusCheckRollup)
+### Recently Merged (from `authoredMerged[]`)
+| # | Repo | Title | Merged At | URL |
 
-Flag PRs that are:
-- Approved but not merged (ready to go!)
-- Open > 7 days with no review (may need a ping)
-- CI failing (needs attention)
-
-### Recently Merged (14 days)
-| # | Repo | Title | Merged | URL |
-|---|------|-------|--------|-----|
-
-### Review Requests (PRs needing my review)
-| # | Repo | Title | Author | Age | URL |
-|---|------|-------|--------|-----|-----|
-
-Sort by age (oldest first — review these first).
+### Review Requests for Me (from `reviewRequested[]`)
+| # | Repo | Title | Author | URL |
 
 Always include clickable GitHub URLs.
 
 ### Contextual Actions (Dynamic)
 
-After presenting the report, use `AskUserQuestion`: "Which PR would you like to act on?" with each PR number as an option, plus "Done (no actions needed)".
+Use `AskUserQuestion`: "Which PR to act on?" with PR numbers + "Done".
 
-When the user picks a PR, resolve its available actions from the GitHub API:
-
-1. **Fetch PR details:** `gh pr view <PR-URL> --json state,reviewDecision,statusCheckRollup,isDraft,mergeable,headRefName`
-2. **Build dynamic options** based on the PR's current state:
-   - **If approved + checks passing + mergeable:** "Merge this PR" (primary action), "Squash and merge", "Rebase and merge"
-   - **If approved + checks failing:** "View failing checks" (`gh pr checks <PR-URL>`), "Re-run failed checks"
-   - **If changes requested:** "View review comments" (`gh pr view <PR-URL> --comments`), "Push a fix and re-request review"
-   - **If no reviews yet:** "Request review from..." (list team members from roster files by GitHub handle)
-   - **If draft:** "Mark as ready for review" (`gh pr ready <PR-URL>`)
-   - **If checks pending:** "View check status" (`gh pr checks <PR-URL>`)
-   - Always include: "Add a comment", "Close PR", "Open in browser", "Done (back to list)"
-
-3. **Execute the chosen action** (with confirmation via `AskUserQuestion` for any write operation).
-
-4. **Action loop:** After executing an action, re-fetch PR state and offer updated actions. Continue until user picks "Done (back to list)". Then return to PR selection.
+When user picks a PR:
+1. Fetch state: `gh pr view <URL> --json state,reviewDecision,statusCheckRollup,isDraft,mergeable`
+2. Build dynamic options from state:
+   - Approved + passing + mergeable → "Merge", "Squash and merge"
+   - Checks failing → "View failing checks", "Re-run checks"
+   - No reviews → "Request review from..."
+   - Draft → "Mark ready for review"
+   - Changes requested → "View review comments"
+   - Always: "Add a comment", "Open in browser", "Done"
+3. Execute with confirmation. Action loop until done.

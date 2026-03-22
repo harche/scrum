@@ -4,81 +4,44 @@ Arguments: $ARGUMENTS
 Format: `<name-or-partial>`
 Example: `/team-member Sai` or `/team-member Aditi`
 
-Look up the GitHub handle by matching the name argument (case-insensitive partial match) against roster keys. Search both `config/team-roster-dra.json` and `config/team-roster-core.json` (no team selection needed — search all rosters). If no match is found, ask the user for the GitHub handle.
+Look up the GitHub handle by matching the name argument (case-insensitive partial match) against roster keys. Search both `config/team-roster-dra.json` and `config/team-roster-core.json`. If no match, ask the user.
 
 ## Steps
 
-1. **Identify the person in Jira:**
-   Find the active Node Core sprint:
-   `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh sprints active` — filter for "Node Core".
+1. **Determine which team** the person belongs to by checking both roster files.
 
-   Get sprint issues and match the name argument (case-insensitive partial match) against assignee displayName:
-   `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh sprint-issues <sprintId>`
+2. **Fetch standup data:**
+   `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh standup-data "<team>"`
 
-   Note the sprint startDate and endDate for time-bounding queries.
+   Returns: `sprint`, `byStatus` (all issues grouped), `memberActivity[]` (per member with sprintItems, commentCount7d, statusSummary).
 
-2. **Their sprint items:**
-   From the sprint issues, filter to items assigned to this person. Show status, summary, story points.
-
-3. **Their Jira activity (comments):**
-   For each of their assigned items, fetch comments:
-   `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh comments <ISSUE-KEY>`
-   Show recent comments by this person (within sprint dates). Convert ADF body to readable text. Also note comments from others on their items (review feedback, questions).
-
-4. **Their broader Jira activity:**
-   Search for issues they updated recently (not just sprint items):
-   `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh search 'assignee = "<email>" AND updated >= "<sprintStartDate>" ORDER BY updated DESC'`
-
-## ADF Handling
-API v3 returns comment `body` in Atlassian Document Format (ADF). Extract readable text by recursively walking ADF nodes: collect `text` from `type: "text"` nodes, add newlines after `paragraph`, `heading`, `listItem`, `blockquote`, and `hardBreak` nodes.
+3. Render the target member's data directly from:
+   - Items from `byStatus` where assignee matches the name
+   - Their entry in `memberActivity[]` for comment count and status summary
 
 ## Output
 
 ### Activity Summary — [Person Name]
-Sprint: [name]
+Sprint: `sprint.name`
 
 ### Sprint Items
-
-Table with: #, key, type, summary, status, story points
+Table of items from `byStatus` where assignee matches: #, key, type, summary, status, points.
 
 ### Jira Activity
-- Recent comments they wrote (date, issue, snippet)
-- Items they updated outside the sprint board
+From `memberActivity[]` for this person:
+- Sprint items by status (from `statusSummary`)
+- Comment count (from `commentCount7d`)
 
 ### Overall Assessment
-- What they're primarily working on this sprint
-- Any items that appear stalled (no recent activity)
-- Conversation threads that may need follow-up
+- What they're primarily working on
+- Any items that appear stalled
+- Threads needing follow-up
 
 Always include clickable Jira URLs.
 
 ### Contextual Actions (Dynamic)
 
-After presenting the report, use `AskUserQuestion`: "What would you like to do?" with options:
-
-- "Act on one of [Person Name]'s items" — then ask which item number
-- "Run `/team-member-github <name>`" — for their GitHub activity
-- "Post to GitHub Discussion"
-- "Done (no actions needed)"
-
-**If user picks an item**, resolve available actions from the API:
-1. Fetch transitions: `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh transitions <KEY>`
-2. Check state: has points? blocked? assignee?
-3. Build dynamic options:
-   - List available transitions by name (from the transitions API)
-   - "Reassign" (list roster members)
-   - "Set story points" / "Update story points"
-   - "Flag as blocked" / "Unflag blocker"
-   - "Add a comment"
-   - "Investigate (deep dive)"
-   - "Done (back to report)"
-4. Execute with confirmation. Action loop until user returns.
-
-## Posting to GitHub Discussion (Optional)
-
-When the user opts to post, add the report as a **comment** on an existing Discussion (e.g., the standup discussion for this sprint). Use `AskUserQuestion` to ask for the discussion number if not already known (e.g., "Which discussion number to post to? (e.g., 3)").
-
-1. **Build the report body** — write the full output (sprint items, Jira activity, overall assessment) as markdown to a temp file.
-
-2. **Post:** `bin/gh-discussion.sh comment <discussion-number> <body-file>`
-   Show the returned comment URL to the user.
+Use `AskUserQuestion`: "What to do?" with:
+- "Act on one of [Name]'s items" → ask which, fetch transitions, action loop
+- "Run `/team-member-github <name>`"
+- "Done"

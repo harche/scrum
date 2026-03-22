@@ -4,48 +4,33 @@ Takes an optional argument: the next sprint number. If not provided, discover th
 
 ## Steps
 
-1. **Team Selection:** Use `AskUserQuestion` to ask which team (see "Team Selection" in CLAUDE.md). Use the selected team's sprint filter, roster file, and bug components for all subsequent steps.
+1. **Team Selection:** Use `AskUserQuestion` to ask which team (see "Team Selection" in CLAUDE.md). Use the selected team name for the composite command.
 
-2. Find active and future sprints for the selected team:
-   `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh sprints active`
-   `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh sprints future`
-   Filter for the team's sprint name pattern. The active sprint is the current one; the future sprint is what we're planning.
+2. **Fetch all planning data in one call:**
+   `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh planning-data "<team>"`
 
-2. Get current sprint issues (carryovers):
-   `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh sprint-issues <activeSprintId>`
-   Identify items NOT in Done/Closed/Verified — these are potential carryovers.
+   This returns: `activeSprint`, `futureSprint` (or null), `wrapUp` (done + carryovers with counts and points), `scheduled` (items already in next sprint), `backlogCandidates`, `unscheduledBugs`, `roster`.
 
-3. Get items already in the next sprint:
-   `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh sprint-issues <futureSprintId>`
-
-4. Check the backlog for candidates (use the selected team's bug components and backlog keywords from Team Selection table in CLAUDE.md):
-   `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh search 'project = OCPNODE AND sprint is EMPTY AND status not in (Closed, Done) AND (component in (<team bug components>) OR summary ~ "<team keywords>") ORDER BY priority DESC, created ASC' `
-
-5. Check for open bugs that should be scheduled (use the selected team's bug components):
-   `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh search 'project = OCPBUGS AND component in (<team bug components>) AND sprint is EMPTY AND status not in (CLOSED, Verified, Done) ORDER BY priority DESC'`
-
-6. Produce the planning report:
+3. Produce the planning report from the returned data.
 
 ### Current Sprint Wrap-up
-- Sprint name, end date
-- Completion stats: done vs total
-- **Carryover candidates**: table of not-done items with key, summary, status, assignee, story points
+From `wrapUp`: Sprint name, end date, completion stats (doneCount/carryoverCount, donePoints/carryoverPoints).
+**Carryover candidates**: table from `wrapUp.carryovers` — key, summary, status, assignee, story points.
 
 ### Next Sprint
-- Sprint name, start/end dates, duration in days
+From `futureSprint`: Sprint name, start/end dates, duration in days.
 
 ### Already Scheduled
-Table of items already in the next sprint: key, summary, assignee, priority, story points
+Table from `scheduled`: key, summary, assignee, priority, story points.
 
 ### Backlog Candidates
-Table of unscheduled items that could be pulled in: key, summary, priority, story points
+Table from `backlogCandidates`: key, summary, priority, story points.
 
 ### Open Bugs (unscheduled)
-Table of bugs not yet in any sprint: key, summary, priority, assignee
+Table from `unscheduledBugs`: key, summary, priority, assignee.
 
 ### Team Capacity
-Load the **team roster** from the selected team's roster file.
-List every roster member and their current carryover load (0 if none). This shows the full team's availability, not just those with carryovers.
+From `roster`: List every roster member and their current carryover load (count from `wrapUp.carryovers` filtered by assignee, 0 if none).
 
 ### Interactive Planning (Dynamic)
 Go through each section interactively. For each item, resolve available actions from the API:

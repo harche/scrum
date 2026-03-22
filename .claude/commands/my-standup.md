@@ -2,91 +2,58 @@ Generate my personal standup talking points — what I did, what I'm doing, and 
 
 ## Steps
 
-1. **Team Selection:** Use `AskUserQuestion` to ask which team (see "Team Selection" in CLAUDE.md). Use the selected team's sprint filter.
+Run these in parallel:
 
-2. **Find the active sprint:**
-   `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh sprints active` — filter for the selected team's sprint name pattern. Note sprint ID, startDate, endDate.
+1. **Jira data:**
+   `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh my-standup-data "<team>"`
 
-3. Run these queries **in parallel:**
+   Returns pre-filtered to my items: `sprint` (name, daysElapsed, daysTotal), `done[]`, `inProgress[]`, `blocked[]` (with blockedReason), `upNext[]`, `recentComments[]` (plain text), `summary` (counts).
 
-   a. **My sprint items:**
-      `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh sprint-issues <sprintId>`
-      Filter to items assigned to `harpatil@redhat.com`.
+   **Team Selection:** Use `AskUserQuestion` to ask which team first.
 
-   b. **My recent Jira activity:**
-      `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh search 'assignee = "harpatil@redhat.com" AND updated >= -7d ORDER BY updated DESC'`
+2. **GitHub PRs:**
+   `bin/gh-activity.sh my-prs harche`
 
-   c. **My GitHub PRs (last 7 days):**
-      ```
-      gh search prs --author=harche --updated=">=7-days-ago" --sort=updated --limit=20 --json repository,title,state,url,updatedAt,createdAt
-      ```
-
-   d. **My GitHub reviews (last 7 days):**
-      ```
-      gh search prs --reviewed-by=harche --updated=">=7-days-ago" --sort=updated --limit=10 --json repository,title,url,author,state
-      ```
-
-4. **For each of my sprint items, fetch recent comments:**
-   `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh comments <ISSUE-KEY>`
-   Filter to last 7 days. Extract readable text from ADF body.
+   Returns: `authoredOpen[]`, `authoredMerged[]`, `reviewRequested[]`.
 
 ## Output
 
 ### My Standup — [Date]
-Sprint: [name] | Day X of Y
+Sprint: `sprint.name` | Day `sprint.daysElapsed` of `sprint.daysTotal`
 
 ### Done (since last standup)
-- Jira items moved to Done/Closed/Verified in the last 7 days
-- PRs merged in the last 7 days
-- PR reviews completed
+- From `done[]` (Jira items)
+- From `authoredMerged[]` (merged PRs)
 
 ### In Progress
-- Jira items currently In Progress or Code Review
-- Open PRs (with review status)
+- From `inProgress[]` (Jira items with status)
+- From `authoredOpen[]` (open PRs with reviewDecision)
 
 ### Blocked
-- Any of my items with Blocked field set (show blocked reason)
-- PRs with failing CI or changes requested
+- From `blocked[]` — show each item's `blockedReason`
+- PRs from `authoredOpen[]` with failing CI or changes requested
 
 ### Up Next
-- Items still in To Do assigned to me
-- Review requests pending
+- From `upNext[]` (To Do items)
+- From `reviewRequested[]` (PRs needing my review)
 
 ### Talking Points
-Auto-generated 3-5 bullet points suitable for reading aloud at standup:
-- "I completed [X] and [Y]"
-- "I'm currently working on [Z], which is [status]"
-- "I'm blocked on [W] because [reason]"
-- "Next I'll pick up [V]"
+Auto-generated 3-5 bullet points from the data above.
+
+Always include clickable Jira and GitHub URLs.
 
 ### Contextual Actions (Dynamic)
 
-After presenting the standup, use `AskUserQuestion`: "What would you like to do?" with dynamic options based on the data:
+Use `AskUserQuestion` with options based on data:
+- If blocked items → "Unblock [KEY]" for each
+- If To Do items → "Start working on [KEY]"
+- If PRs approved → "Merge [PR title]"
+- "Act on a Jira item" / "Act on a GitHub PR" / "Done"
 
-**For Jira items:**
-- If any blocked items exist → "Unblock [KEY]: [summary]" for each blocked item
-- If any items in To Do → "Start working on [KEY]" (transition to In Progress)
-- If any items in Progress → "Move [KEY] to Code Review" (if transition available)
-
-**For GitHub PRs:**
-- If any PRs approved + checks passing → "Merge [PR title]"
-- If any PRs with failing CI → "Check CI on [PR title]"
-- If any PRs with no reviews → "Request review on [PR title]"
-
-**Always include:**
-- "Act on a Jira item" — then ask which item number, fetch transitions + state, offer dynamic actions
-- "Act on a GitHub PR" — then ask which PR, fetch PR state via `gh pr view`, offer dynamic actions
-- "Done (no actions needed)"
-
-**When user picks a Jira item:**
+When user picks a Jira item:
 1. Fetch transitions: `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh transitions <KEY>`
-2. Check state: has points? blocked? assignee?
-3. Build dynamic options: transitions, set points, flag/unflag blocker, add comment, investigate
-4. Execute with confirmation. Action loop until user returns.
+2. Build dynamic options, execute with confirmation, action loop.
 
-**When user picks a GitHub PR:**
-1. Fetch PR state: `gh pr view <PR-URL> --json state,reviewDecision,statusCheckRollup,isDraft,mergeable`
-2. Build dynamic options based on state (merge, request review, view checks, comment, close)
-3. Execute with confirmation. Action loop until user returns.
-
-Always include clickable Jira and GitHub URLs.
+When user picks a GitHub PR:
+1. Fetch state: `gh pr view <URL> --json state,reviewDecision,statusCheckRollup,isDraft,mergeable`
+2. Build dynamic options, execute with confirmation, action loop.

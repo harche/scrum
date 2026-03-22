@@ -1,0 +1,59 @@
+{
+  "expand": "schema,names",
+  "startAt": 0,
+  "maxResults": 100,
+  "total": 3,
+  "issues": [
+    {
+      "key": "OCPNODE-1001",
+      "fields": {
+        "summary": "Implement feature A",
+        "status": {"name": "Closed", "id": "6", "statusCategory": {"key": "done", "name": "Done"}},
+        "assignee": {"displayName": "Alice Smith", "emailAddress": "alice@example.com"},
+        "priority": {"name": "Major"},
+        "issuetype": {"name": "Story"},
+        "fixVersions": [],
+        "customfield_10020": [{"id": 6171, "name": "OCP Node Devices Sprint 285", "state": "active"}],
+        "customfield_10028": 3.0,
+        "customfield_10014": "OCPNODE-900",
+        "customfield_10517": {"value": "False"},
+        "customfield_10483": {"type": "doc", "version": 1, "content": [{"type": "paragraph", "content": [{"type": "text", "text": "None"}]}]},
+        "customfield_10847": null
+      }
+    },
+    {
+      "key": "OCPNODE-1002",
+      "fields": {
+        "summary": "Fix critical bug B",
+        "status": {"name": "In Progress", "id": "3", "statusCategory": {"key": "indeterminate", "name": "In Progress"}},
+        "assignee": {"displayName": "Bob Jones", "emailAddress": "bob@example.com"},
+        "priority": {"name": "Critical"},
+        "issuetype": {"name": "Bug"},
+        "fixVersions": [{"name": "4.20"}],
+        "customfield_10020": [{"id": 6171, "name": "OCP Node Devices Sprint 285", "state": "active"}],
+        "customfield_10028": 5.0,
+        "customfield_10014": null,
+        "customfield_10517": {"value": "True"},
+        "customfield_10483": {"type": "doc", "version": 1, "content": [{"type": "paragraph", "content": [{"type": "text", "text": "Waiting on upstream fix"}]}]},
+        "customfield_10847": "Proposed"
+      }
+    },
+    {
+      "key": "OCPNODE-1003",
+      "fields": {
+        "summary": "Research spike C",
+        "status": {"name": "To Do", "id": "10000", "statusCategory": {"key": "new", "name": "To Do"}},
+        "assignee": null,
+        "priority": {"name": "Normal"},
+        "issuetype": {"name": "Spike"},
+        "fixVersions": [],
+        "customfield_10020": [{"id": 6171, "name": "OCP Node Devices Sprint 285", "state": "active"}],
+        "customfield_10028": null,
+        "customfield_10014": null,
+        "customfield_10517": {"value": "False"},
+        "customfield_10483": {"type": "doc", "version": 1, "content": [{"type": "paragraph", "content": [{"type": "text", "text": "None"}]}]},
+        "customfield_10847": null
+      }
+    }
+  ]
+}

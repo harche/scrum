@@ -4,81 +4,43 @@ Arguments: $ARGUMENTS
 Format: `<name-or-partial>`
 Example: `/team-member-github Sai` or `/team-member-github Aditi`
 
-Look up the GitHub handle by matching the name argument (case-insensitive partial match) against roster keys. Search both `config/team-roster-dra.json` and `config/team-roster-core.json` (no team selection needed — search all rosters). If no match is found, ask the user for the GitHub handle.
+Look up the GitHub handle by matching the name argument (case-insensitive partial match) against roster keys in both `config/team-roster-dra.json` and `config/team-roster-core.json`.
 
 ## Steps
 
-1. **Determine time window:**
-   Find the active sprint (try both "Node Core" and "Node Devices" patterns):
-   `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh sprints active`
-   Use the sprint startDate as the `since-date` for GitHub queries. If no sprint found, default to 14 days ago.
+1. **Resolve GitHub handle** from roster files.
 
-2. **GitHub PRs (authored):**
-   ```
-   gh search prs --author=<github-handle> --updated=">=$since-date" --sort=updated --limit=20 --json repository,title,state,url,updatedAt,createdAt
-   ```
-   For each PR, note: repo, title, state, created/updated dates.
+2. **Fetch member's GitHub activity:**
+   `bin/gh-activity.sh member-prs <github-handle>`
 
-3. **GitHub PR reviews:**
-   ```
-   gh search prs --reviewed-by=<github-handle> --updated=">=$since-date" --sort=updated --limit=20 --json repository,title,state,url,author
-   ```
+   Returns: `authored[]` (PRs with repo, title, state, url, reviewDecision, mergedAt), `reviewed[]` (PRs reviewed), `issues[]` (GitHub issues), `summary` (authored, reviewed, issues counts).
 
-4. **GitHub issues:**
-   ```
-   gh search issues --author=<github-handle> --updated=">=$since-date" --sort=updated --limit=10 --json repository,title,state,url
-   gh search issues --commenter=<github-handle> --updated=">=$since-date" --sort=updated --limit=10 --json repository,title,state,url,author
-   ```
-
-Steps 2, 3, 4 are independent — run them **in parallel**.
+3. Render directly from the returned JSON.
 
 ## Output
 
-### GitHub Activity — [Person Name] (@[handle])
-Sprint window: [start] to [end]
-
-### PRs Authored
-
-Table with: #, repo, title, state, created, updated
-Group by: open vs merged vs closed
-
-### PR Reviews
-
-Table with: #, repo, PR title, author
-
-### GitHub Issues
-
-Table with: #, repo, title, their role (author/commenter)
+### GitHub Activity — [Name] (@[handle])
 
 ### Summary
-- 1–2 sentence narrative of what they're working on in GitHub
-- Areas of focus (repos, themes)
-- Any PRs that appear stalled (open with no recent updates)
+From `summary`: authored PRs, reviewed PRs, issues.
+
+### Authored PRs (from `authored[]`)
+| # | Repo | Title | State | Review Status | URL |
+
+### PRs Reviewed (from `reviewed[]`)
+| # | Repo | Title | Author | State | URL |
+
+### GitHub Issues (from `issues[]`)
+| # | Repo | Title | State | URL |
+
+### Activity Narrative
+Synthesize a brief summary of what this person has been doing on GitHub this week.
 
 Always include clickable GitHub URLs.
 
 ### Contextual Actions (Dynamic)
 
-After presenting the report, use `AskUserQuestion`: "What would you like to do?" with options:
-- "Act on one of [Person Name]'s PRs" — then ask which PR number
-- "Post to GitHub Discussion"
-- "Done (no actions needed)"
-
-**If user picks a PR**, resolve actions from the GitHub API:
-1. Fetch PR details: `gh pr view <PR-URL> --json state,reviewDecision,statusCheckRollup,isDraft,mergeable`
-2. Build dynamic options based on state:
-   - Approved + passing → "Merge", "Squash and merge"
-   - No reviews → "Request review from..." (list roster handles)
-   - Changes requested → "View review comments"
-   - Draft → "Mark ready for review"
-   - Always: "Add a comment", "Approve", "Request changes", "Open in browser", "Done (back to report)"
-3. Execute with confirmation. Action loop until user returns.
-
-## Posting to GitHub Discussion (Optional)
-
-When the user opts to post, add the report as a **comment** on an existing Discussion. Use `AskUserQuestion` to ask for the discussion number if not known.
-
-1. **Build the report body** — write the full output (PRs, reviews, issues, summary) as markdown to a temp file.
-
-2. **Post:** `bin/gh-discussion.sh comment <discussion-number> <body-file>`
-   Show the returned comment URL to the user.
+Use `AskUserQuestion`: "What to do?" with:
+- "View a specific PR" → fetch state, offer merge/review/comment actions
+- "Run `/team-member <name>`" for Jira activity
+- "Done"

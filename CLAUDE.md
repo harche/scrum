@@ -55,9 +55,85 @@ bin/jira.sh close [comment] <ISSUE-KEY> [<ISSUE-KEY>...]
 bin/jira.sh comment <body> <ISSUE-KEY> [<ISSUE-KEY>...]
 ```
 
-All output is JSON. `bin/jira.sh` uses the Agile REST API (`/rest/agile/1.0/`) for sprint and sprint-issues queries, and REST API v3 (`/rest/api/3/`) for everything else. Use `python3` or `jq` to parse and format.
+All output is JSON. `bin/jira.sh` uses the Agile REST API (`/rest/agile/1.0/`) for sprint and sprint-issues queries, and REST API v3 (`/rest/api/3/`) for everything else.
 
-**ADF format:** API v3 returns `description` and comment `body` fields in Atlassian Document Format (ADF — a nested JSON structure), not plain text. To extract readable text, recursively walk ADF nodes: collect `text` from nodes with `type: "text"`, and add newlines after `paragraph`, `heading`, `listItem`, `blockquote`, and `hardBreak` nodes.
+**ADF format:** API v3 returns `description` and comment `body` fields in Atlassian Document Format (ADF). Use the standalone converter: `echo '<adf-json>' | python3 bin/lib/util/adf.py` (also supports `--field`, `--comments`, `--issues` modes).
+
+### High-Level Composite Commands
+
+**Prefer composite commands over multiple low-level calls.** They parallelize internally and return pre-computed JSON:
+
+```bash
+# Sprint dashboard — issues by status, workload, blockers (serves /sprint-status, /team-load, /sprint-review)
+bin/jira.sh sprint-dashboard <team>
+
+# Standup data — dashboard + updates + bugs + comments + activity (serves /standup, /team-member)
+bin/jira.sh standup-data <team>
+
+# Bug overview — untriaged, unassigned, blockers, escalations, new (serves /bug-triage)
+bin/jira.sh bug-overview <team>
+
+# Carryover report — not-done items with context (serves /carryovers)
+bin/jira.sh carryover-report <team>
+
+# Planning data — carryovers + scheduled + backlog + unscheduled bugs (serves /sprint-plan)
+bin/jira.sh planning-data <team>
+
+# Issue deep dive — full issue + comments (ADF converted) + linked issues + transitions (serves /investigate, /briefing, /handoff, /update, /blocker)
+bin/jira.sh issue-deep-dive <KEY>
+
+# Release data — blockers, open bugs, epics for a version (serves /release-check)
+bin/jira.sh release-data <team> [version]
+
+# Team activity — per-member sprint items + comment counts (serves /standup, /team-member)
+bin/jira.sh team-activity <team>
+
+# My board — sprint items filtered to current user (serves /my-board)
+bin/jira.sh my-board-data <team>
+
+# My bugs — bugs assigned to current user (serves /my-bugs)
+bin/jira.sh my-bugs-data <team>
+
+# My standup — standup data filtered to current user (serves /my-standup, Jira side)
+bin/jira.sh my-standup-data <team>
+
+# Epic progress — epics I'm contributing to with children progress (serves /my-epics)
+bin/jira.sh epic-progress <team>
+
+# Pickup — all available unassigned work (serves /pickup)
+bin/jira.sh pickup-data <team>
+```
+
+`<team>` accepts: `"Node Devices"`, `"Node Core"`, `"dra"`, `"core"` (case-sensitive).
+
+### GitHub Activity Commands
+
+`bin/gh-activity.sh` provides composite GitHub commands:
+
+```bash
+bin/gh-activity.sh my-prs <handle>         # My PRs + review requests (serves /my-prs)
+bin/gh-activity.sh my-issues <handle>      # My GitHub issues (serves /my-github-issues)
+bin/gh-activity.sh review-queue <handle>   # PRs awaiting my review (serves /review-queue)
+bin/gh-activity.sh team-prs <roster-file>  # All members' activity (serves /standup-github)
+bin/gh-activity.sh member-prs <handle>     # One member's activity (serves /team-member-github)
+```
+
+### Architecture
+
+```
+bin/jira.sh              — Thin dispatcher (sources all modules)
+bin/gh-activity.sh       — GitHub activity composite commands
+bin/gh-discussion.sh     — GitHub Discussions publish/comment
+bin/lib/core.sh          — Auth, HTTP, constants, logging
+bin/lib/team.sh          — Team config resolution
+bin/lib/api/*.sh         — Low-level API commands (issue, sprint, comment, transition, fields)
+bin/lib/composite/*.sh   — High-level Jira composite commands
+bin/lib/util/adf.py      — ADF-to-text converter
+bin/lib/util/parallel.sh — Background job management + streaming
+bin/lib/util/retry.sh    — Exponential backoff + rate limiting
+bin/lib/util/cache.sh    — Sprint caching (5-min TTL)
+tests/                   — bats-core tests (run: bats tests/test-*.bats)
+```
 
 ## Board & Sprint Info
 

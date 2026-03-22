@@ -2,13 +2,14 @@ Show the current sprint dashboard.
 
 ## Steps
 
-1. **Team Selection:** Use `AskUserQuestion` to ask which team (see "Team Selection" in CLAUDE.md). Use the selected team's sprint filter for all subsequent steps.
+1. **Team Selection:** Use `AskUserQuestion` to ask which team (see "Team Selection" in CLAUDE.md). Use the selected team name for the composite command.
 
-2. Run `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh sprints active` and find the sprint matching the selected team's sprint name pattern. Note its ID, name, startDate, and endDate.
+2. **Fetch all sprint data in one call:**
+   `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh sprint-dashboard "<team>"`
 
-2. Run `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh sprint-issues <sprintId>` to get all issues.
+   This returns a single JSON blob with: `sprint` (id, name, dates, daysElapsed, daysTotal, daysRemaining), `summary` (counts by status, points), `byStatus` (issues grouped by status), `blockers`, `atRisk`, `teamWorkload`, `roster`.
 
-3. Parse the JSON and produce a dashboard with:
+3. Parse the JSON and produce a dashboard.
 
 ### Sprint Header
 - Sprint name, start date, end date, days remaining
@@ -17,21 +18,21 @@ Show the current sprint dashboard.
 Table with: Total items, Done/Closed, In Progress, Code Review, To Do/New, Bugs vs Stories
 
 ### Items by Status
-Group items into tables by status category:
+Group items into tables by status category (from `byStatus`):
 - **Done/Closed** (collapsed count only unless asked)
 - **In Progress** — show key, summary, assignee, story points
 - **Code Review** — show key, summary, assignee
 - **To Do / New** — show key, summary, assignee, priority
-- **Blocked** — any item with Blocked field set, show with blocked reason
+- **Blocked** — items from `blockers` array, show with blocked reason
 
 ### At Risk
-Flag items that might not finish this sprint:
+Items from `atRisk` array:
 - Items still in To Do with < 3 days remaining
 - Items with no assignee
 - Bugs with Undefined priority (untriaged)
 
 ### Team Workload
-Table: assignee, # items in progress, # items done, # items total
+Table from `teamWorkload`: assignee, # items in progress, # items done, # items total
 
 ### Contextual Actions (Dynamic)
 

@@ -11,6 +11,7 @@ Requires:
 - Jira API token (stored in macOS Keychain as `JIRA_API_TOKEN`)
 - `JIRA_EMAIL` environment variable
 - [GitHub CLI](https://cli.github.com/) (`gh`) authenticated
+- `bats-core` for tests (`brew install bats-core`)
 
 ## Commands
 
@@ -58,11 +59,74 @@ Requires:
 
 Each command follows a **show → select → act → loop** pattern:
 
-1. **Show** — Fetches data from Jira/GitHub APIs and presents it in tables
+1. **Show** — Calls a single composite command that parallelizes all API calls internally and returns pre-computed JSON
 2. **Select** — Asks which item to act on (numbered for easy reference)
 3. **Act** — Queries the API for available actions on that item:
-   - **Jira:** Fetches actual transitions (`bin/jira.sh transitions`), checks field state (story points, blocked status, assignee, customer cases)
-   - **GitHub:** Fetches PR state (`gh pr view --json`), checks review decision, CI status, merge readiness
+   - **Jira:** Fetches actual transitions, checks field state (story points, blocked status, assignee, customer cases)
+   - **GitHub:** Fetches PR state, checks review decision, CI status, merge readiness
 4. **Loop** — After each action, re-fetches state and offers the next set of actions. Continues until you're done.
 
 The options you see are always driven by the current state — if a Jira transition isn't available, it won't appear. If a PR is approved with passing checks, "Merge" is offered. No stale menus.
+
+## Architecture
+
+```
+bin/
+  jira.sh                    Thin dispatcher — sources modular libraries
+  gh-activity.sh             GitHub activity composite commands
+  gh-discussion.sh           GitHub Discussions publish/comment
+  lib/
+    core.sh                  Auth, HTTP, constants, logging
+    team.sh                  Team config resolution (sprint filter, roster, components)
+    api/
+      issue.sh               cmd_search, cmd_get
+      sprint.sh              cmd_sprints, cmd_sprint_issues
+      comment.sh             cmd_comments, cmd_comment
+      transition.sh          cmd_transitions, cmd_transition, cmd_close
+      fields.sh              cmd_set_points, cmd_move_to_sprint
+    composite/
+      sprint-dashboard.sh    Sprint info + issues by status + workload + blockers
+      standup-data.sh        Dashboard + updates + bugs + comments + activity
+      bug-overview.sh        Untriaged + unassigned + blockers + escalations
+      carryover-report.sh    Not-done items with carryover context
+      planning-data.sh       Carryovers + scheduled + backlog + bugs
+      issue-deep-dive.sh     Full issue + comments (ADF→text) + transitions
+      release-data.sh        Blockers + open bugs + epics for a version
+      team-activity.sh       Per-member sprint items + comment counts
+      my-board-data.sh       Sprint items filtered to current user
+      my-bugs-data.sh        User's bugs with categories
+      my-standup-data.sh     Standup data filtered to current user
+      epic-progress.sh       Epics with children progress
+      pickup-data.sh         Unassigned sprint items + bugs + escalations
+    util/
+      adf.py                 ADF-to-text converter (standalone)
+      parallel.sh            Background job management + streaming
+      retry.sh               Exponential backoff + rate limiting
+      cache.sh               Sprint caching (5-min TTL)
+config/
+  team-roster-dra.json       Node Devices (DRA) team roster
+  team-roster-core.json      Node Core team roster
+tests/
+  fixtures/                  Mock API responses
+  test-core.bats             Auth, constants, utilities
+  test-api.bats              Low-level API commands
+  test-adf.bats              ADF-to-text conversion
+  test-team.bats             Team config resolution
+  test-parallel.bats         Job management
+  test-composite.bats        All composite commands
+  run-tests.sh               Test runner
+```
+
+Every slash command calls exactly one composite script (or two in parallel for Jira+GitHub commands). The composites handle all API parallelization, data grouping, ADF conversion, and filtering. Claude renders the JSON output directly — zero post-processing.
+
+## Tests
+
+```bash
+# Run all tests
+bats tests/test-*.bats
+
+# Run a specific test file
+bats tests/test-composite.bats
+```
+
+91 tests covering: core utilities, API commands, ADF conversion, team config, parallel execution, and all 13 Jira composite commands.

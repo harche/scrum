@@ -2,17 +2,16 @@ Prepare a sprint review summary for the current (or just-completed) sprint.
 
 ## Steps
 
-1. **Team Selection:** Use `AskUserQuestion` to ask which team (see "Team Selection" in CLAUDE.md). Use the selected team's sprint filter for all subsequent steps.
+1. **Team Selection:** Use `AskUserQuestion` to ask which team (see "Team Selection" in CLAUDE.md). Use the selected team name for the composite command.
 
-2. Find the active sprint for the selected team:
-   `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh sprints active` — filter for the team's sprint name pattern.
+2. **Fetch all sprint data in one call:**
+   `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh sprint-dashboard "<team>"`
 
-2. Get all sprint issues:
-   `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh sprint-issues <sprintId>`
+   This returns: `sprint` (name, dates, daysElapsed, daysTotal), `summary` (done/total counts, donePoints/totalPoints), `byStatus` (issues grouped — use "done" group for completed, everything else for incomplete).
 
-3. Separate completed (Done/Closed/Verified) from incomplete items.
+3. Separate completed (from `byStatus.done`) from incomplete items (all other groups).
 
-4. Calculate velocity: sum of story points for completed items.
+4. Calculate velocity: sum of story points for completed items (from `summary.donePoints`).
 
 ## Output
 

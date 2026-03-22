@@ -6,56 +6,25 @@ Example: `/update OCPNODE-1234` or `/update OCPBUGS-65805`
 
 ## Steps
 
-1. **Fetch the issue:**
-   `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh get $ARGUMENTS`
+1. **Fetch issue data:**
+   `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh issue-deep-dive $ARGUMENTS`
 
-2. **Show current state:**
-   Display: key, summary, status, assignee, story points, sprint, priority.
-   Convert description from ADF to readable text (brief summary, first ~3 lines).
+   Returns: `key`, `summary`, `status`, `assignee`, `points`, `blocked`, `blockedReason`, `transitions[]` (available transitions with id and name).
 
-3. **Resolve available actions dynamically:**
-   a. Fetch available transitions: `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh transitions $ARGUMENTS`
-   b. Check current state from the fetched issue:
-      - Has story points (customfield_10028)? → offer "Update story points" : "Set story points"
-      - Is blocked (customfield_10517 set)? → offer "Unflag blocker" : "Flag as blocked"
-      - Has assignee? → offer "Reassign" : "Assign"
+2. Show brief issue context: key, summary, status, assignee, points.
 
-   c. Use `AskUserQuestion`: "What would you like to do with [KEY]?"
-      - List each available transition by name (from the transitions API)
-      - Include the state-based options from step b
-      - Always include: "Add a comment"
-      - Always include: "Done (no action needed)"
+3. **Build dynamic options** from the returned data:
+   - List each transition by name from `transitions[]`
+   - Has points? → "Update story points" : "Set story points"
+   - Is blocked? → "Unflag blocker" : "Flag as blocked"
+   - "Add a comment"
+   - "Reassign"
+   - "Done"
 
-4. **Execute the chosen action:**
+4. Use `AskUserQuestion`: "What would you like to do with [$ARGUMENTS]?"
 
-   **Add a comment:**
-   - Use `AskUserQuestion` to ask: "What should the comment say?"
-   - Draft the comment and show it to the user
-   - Use `AskUserQuestion` to confirm: "Post this comment to [KEY]?"
-   - If confirmed, post via Jira REST API:
-     ```
-     curl -s -X POST "https://redhat.atlassian.net/rest/api/3/issue/$ARGUMENTS/comment" \
-       -H "Authorization: Basic $(echo -n "$JIRA_EMAIL:$JIRA_API_TOKEN" | base64)" \
-       -H "Content-Type: application/json" \
-       -d '{"body": {"type": "doc", "version": 1, "content": [{"type": "paragraph", "content": [{"type": "text", "text": "<comment>"}]}]}}'
-     ```
+5. **Execute the chosen action** (with confirmation).
 
-   **Transition status:**
-   - Get available transitions: `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh transitions $ARGUMENTS`
-   - Use `AskUserQuestion` to show available transitions as options
-   - Use `AskUserQuestion` to confirm: "Move [KEY] to [new status]?"
-   - If confirmed, execute the transition via REST API
+6. **Action loop:** After executing, re-fetch via `bin/jira.sh issue-deep-dive $ARGUMENTS`, offer next actions. Continue until "Done".
 
-   **Set story points:**
-   - Use `AskUserQuestion`: "How many story points?" with options: 1, 2, 3, 5, 8
-   - Use `AskUserQuestion` to confirm: "Set [KEY] to [N] points?"
-   - If confirmed: `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh set-points $ARGUMENTS <points>`
-
-   **Reassign:**
-   - Use `AskUserQuestion`: "Who should this be assigned to?" — search both roster files for names as options
-   - Use `AskUserQuestion` to confirm the reassignment
-   - If confirmed, update via REST API
-
-5. **Action loop:** After executing an action, re-fetch the issue and transitions, then offer the next set of contextual actions. Continue until the user picks "Done".
-
-Always include clickable Jira URLs.
+Always include clickable Jira URL.

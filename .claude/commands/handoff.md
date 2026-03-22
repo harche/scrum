@@ -8,13 +8,12 @@ Example: `/handoff OCPNODE-1234` or `/handoff OCPBUGS-65805`
 
 Run these in parallel:
 
-1. **Fetch the issue:**
-   `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh get $ARGUMENTS`
+1. **Fetch issue data (Jira):**
+   `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh issue-deep-dive $ARGUMENTS`
 
-2. **Fetch comments:**
-   `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh comments $ARGUMENTS`
+   Returns: `key`, `summary`, `description` (plain text), `status`, `assignee`, `priority`, `type`, `points`, `fixVersions`, `epicKey`, `blocked`, `blockedReason`, `sfdcCaseCount`, `linkedIssues[]`, `comments[]` (plain text), `transitions[]`.
 
-3. **Search for related GitHub PRs:**
+2. **Search for related GitHub PRs:**
    ```
    gh search prs "$ARGUMENTS" --sort=updated --limit=10 --json repository,title,state,url,author,createdAt,updatedAt,mergedAt
    ```
@@ -24,32 +23,28 @@ Run these in parallel:
 ### Handoff Summary — [KEY]: [Summary]
 
 ### Current State
-- Status: [status]
-- Assignee: [current assignee]
-- Sprint: [sprint name]
-- Story Points: [pts]
-- Priority: [priority]
+- Status, assignee, sprint, story points, priority (from issue data)
 
 ### What This Issue Is About
-Description converted from ADF to readable text, condensed to key points.
+Description from `description` field, condensed to key points.
 
 ### What's Been Done
-Summarize from comments and PR activity:
+Summarize from `comments[]` and PR activity:
 - Key decisions made (from comments)
 - PRs opened/merged (from GitHub search)
 - Current progress state
 
 ### What's Remaining
-Based on the description, comments, and current status:
+Based on description, comments, and status:
 - Remaining work items
 - Known open questions
-- Dependencies on other issues (from issuelinks)
+- Dependencies from `linkedIssues[]`
 
 ### Key Context
-- Important comments or discussions (summarize, don't dump raw text)
-- Related issues and their status
-- Any customer impact (SFDC cases)
-- Blockers or risks
+- Important comments (summarize from `comments[]`, don't dump raw text)
+- Related issues from `linkedIssues[]` and their status
+- Any customer impact (`sfdcCaseCount`)
+- Blockers or risks (`blocked`, `blockedReason`)
 
 ### Related PRs
 | # | Repo | Title | State | Author | URL |
@@ -64,21 +59,20 @@ Always include clickable Jira and GitHub URLs.
 
 ### Contextual Actions (Dynamic)
 
-After presenting the handoff summary, resolve available actions from the API:
+After presenting the handoff summary, use transitions from the already-fetched `transitions[]`:
 
-1. **Fetch available transitions:** `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh transitions $ARGUMENTS`
-2. **Check current state** from the already-fetched issue data:
-   - Has story points (customfield_10028)? → offer "Update story points" : "Set story points"
-   - Is blocked (customfield_10517 set)? → offer "Unflag blocker" : "Flag as blocked"
+1. **Check current state:**
+   - Has story points? → offer "Update story points" : "Set story points"
+   - Is blocked? → offer "Unflag blocker" : "Flag as blocked"
 
-3. **Build dynamic options** for `AskUserQuestion`: "What would you like to do with [$ARGUMENTS]?"
+2. **Build dynamic options** for `AskUserQuestion`: "What would you like to do with [$ARGUMENTS]?"
    - "Reassign to a team member" — always offered (this is a handoff)
    - "Post handoff summary as a comment"
-   - List each available transition by name (e.g., "Move to To Do", "Move to In Progress") — from the transitions API
-   - Include the state-based options from step 2
-   - Always include: "Done (no action needed)"
+   - List each available transition by name from `transitions[]`
+   - Include the state-based options
+   - "Done (no action needed)"
 
-4. **Execute the chosen action** (with confirmation via `AskUserQuestion` for any write operation):
+3. **Execute the chosen action** (with confirmation):
 
    **Reassign flow:**
    - Search both `config/team-roster-dra.json` and `config/team-roster-core.json` for team member names
@@ -91,4 +85,4 @@ After presenting the handoff summary, resolve available actions from the API:
    - Use `AskUserQuestion` to confirm
    - If confirmed, post via REST API
 
-5. **Action loop:** After executing an action, re-fetch the issue and transitions, then offer the next set of contextual actions. Continue until the user picks "Done".
+4. **Action loop:** After executing, re-fetch via `bin/jira.sh issue-deep-dive $ARGUMENTS`, offer next actions. Continue until "Done".

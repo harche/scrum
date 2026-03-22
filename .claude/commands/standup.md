@@ -2,28 +2,16 @@ Prepare a summary for the weekly standup/grooming meeting.
 
 ## Steps
 
-1. **Team Selection:** Use `AskUserQuestion` to ask which team (see "Team Selection" in CLAUDE.md). Use the selected team's sprint filter, roster file, and bug components for all subsequent steps.
+1. **Team Selection:** Use `AskUserQuestion` to ask which team (see "Team Selection" in CLAUDE.md). Use the selected team name for the composite command.
 
-2. Find the active sprint for the selected team:
-   `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh sprints active` — filter for the team's sprint name pattern.
-   Note the sprint startDate and endDate for progress calculation.
+2. **Fetch all standup data in one call:**
+   `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh standup-data "<team>"`
 
-3. Load the **team roster** from the selected team's roster file.
+   This returns a single JSON blob with: `sprint` (id, name, dates, progress), `summary` (counts, points), `byStatus` (issues grouped), `blockers`, `atRisk`, `newBugs`, `discussionTopics`, `memberActivity` (per roster member: sprintItems, commentCount7d, statusSummary), `teamWorkload`.
 
-4. Run these 3 queries **in parallel:**
+3. **Display the output** (see Output below).
 
-   a. Get all sprint issues:
-      `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh sprint-issues <sprintId>`
-
-   b. Find recently updated items (last 7 days):
-      `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh search 'sprint = <sprintId> AND updated >= -7d ORDER BY updated DESC'`
-
-   c. Check for new bugs filed against the selected team's components in the last 7 days (use bug components from Team Selection table in CLAUDE.md):
-      `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh search 'project = OCPBUGS AND component in (<team bug components>) AND created >= -7d ORDER BY created DESC'`
-
-5. **Display the output** (see Output below).
-
-6. **Contextual Actions (Dynamic):**
+4. **Contextual Actions (Dynamic):**
 
    After displaying the sprint board, use `AskUserQuestion`: "What would you like to do?" with dynamic options:
 
@@ -48,10 +36,10 @@ Prepare a summary for the weekly standup/grooming meeting.
 ## Output
 
 ### Sprint Progress
-- Sprint name, days elapsed / total days, items done / total, points completed / total
+- Sprint name, days elapsed / total days, items done / total, points completed / total (from `sprint` and `summary`)
 
 ### Sprint Items
-Full table of all sprint issues, grouped by status:
+Full table of all sprint issues from `byStatus`, grouped by status:
 
 | # | Key | Summary | Status | Assignee | Pts |
 |---|-----|---------|--------|----------|-----|
@@ -59,30 +47,27 @@ Full table of all sprint issues, grouped by status:
 Group order: Closed/Done first, then Code Review, then In Progress, then other statuses.
 
 ### Blockers & Risks
-- Items with Blocked field set
+- Items from `blockers` array (Blocked field set)
+- Items from `atRisk` array
 - Bugs with priority Blocker or Critical
-- Items at risk of not completing (considering days remaining)
 
 ### New Bugs (Last 7 Days)
-Any new bugs filed this week against Devices-related components. "None" if empty.
+From `newBugs` array. "None" if empty.
 
 ### Discussion Topics
+From `discussionTopics` array:
 - Items needing grooming (no story points, no assignee)
 - Items that may need to be descoped or carried over (still In Progress with sprint ending soon)
 
 ### Jira Activity (Last 7 Days)
-For each roster member with sprint items, fetch comments:
-`JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh comments <ISSUE-KEY>`
-Filter to last 7 days. Extract readable text from ADF body.
-
-Show a table of roster members with their sprint item status and Jira comment count:
+Table from `memberActivity`:
 
 | # | Member | Sprint Items | Jira Comments |
 |---|--------|-------------|---------------|
 
 For each member:
-- **Sprint Items:** count by status (e.g., "2 Done, 1 In Progress") or "—" if none
-- **Jira Comments:** count of comments in the last 7 days
+- **Sprint Items:** count by status from `statusSummary` (e.g., "2 Done, 1 In Progress") or "—" if none
+- **Jira Comments:** `commentCount7d`
 
 Always include clickable Jira URLs and GitHub URLs.
 

@@ -1,0 +1,43 @@
+{
+  "maxResults": 50,
+  "startAt": 0,
+  "isLast": true,
+  "values": [
+    {
+      "id": 6171,
+      "name": "OCP Node Devices Sprint 285",
+      "state": "active",
+      "startDate": "2026-03-02T15:51:11.212Z",
+      "endDate": "2026-03-23T12:30:00.000Z",
+      "originBoardId": 7845,
+      "goal": "DRA testing and conformance"
+    },
+    {
+      "id": 6170,
+      "name": "OCP Node Core Sprint 285",
+      "state": "active",
+      "startDate": "2026-03-02T14:00:00.000Z",
+      "endDate": "2026-03-23T12:30:00.000Z",
+      "originBoardId": 7845,
+      "goal": "Kubelet stability"
+    },
+    {
+      "id": 6169,
+      "name": "OCP Kueue Sprint 285",
+      "state": "active",
+      "startDate": "2026-03-02T14:00:00.000Z",
+      "endDate": "2026-03-23T12:30:00.000Z",
+      "originBoardId": 7845,
+      "goal": "Kueue integration"
+    },
+    {
+      "id": 9999,
+      "name": "Unrelated Sprint 10",
+      "state": "active",
+      "startDate": "2026-03-01T00:00:00.000Z",
+      "endDate": "2026-03-14T00:00:00.000Z",
+      "originBoardId": 1234,
+      "goal": "Should be filtered out"
+    }
+  ]
+}
