@@ -1,8 +1,8 @@
 # Scrum Master GoGo
 
 <p align="center">
-  <img src="assets/gogo1.jpg" width="45%" />
-  <img src="assets/gogo.jpg" width="45%" />
+  <img src="assets/gogo1.jpg" height="300" />
+  <img src="assets/gogo.jpg" height="300" />
 </p>
 
 <p align="center"><i>"Scrum Master GoGo naam hai mera... carryovers nikal ke gotiyaan khelta hoon main!"</i></p>
