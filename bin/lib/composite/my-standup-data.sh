@@ -1,6 +1,7 @@
 #!/bin/bash
 # Composite: my-standup-data <team>
 # Standup data pre-filtered to current user (Jira side only)
+# 1 data query (was 2 — removed redundant "recent" search that was unused)
 # Serves: /my-standup
 
 [[ -n "${_COMPOSITE_MY_STANDUP_LOADED:-}" ]] && return 0
@@ -20,15 +21,9 @@ cmd_my_standup_data() {
   local sprint_id
   sprint_id=$(echo "$sprint_json" | python3 -c "import json,sys; print(json.load(sys.stdin)['id'])")
 
-  # Parallel: sprint issues + recent activity
-  parallel_init
-  parallel_run "issues" cmd_sprint_issues "$sprint_id"
-  parallel_run "recent" cmd_search "assignee = \"${user_email}\" AND updated >= -7d ORDER BY updated DESC" 30
-  parallel_wait_all || true
-
-  local issues_json recent_json
-  issues_json=$(parallel_get "issues")
-  recent_json=$(parallel_get "recent")
+  # Sprint issues only (removed redundant "recent" search — data was unused)
+  local issues_json
+  issues_json=$(cmd_sprint_issues "$sprint_id")
 
   # Get my issue keys and fetch comments
   local my_keys
@@ -42,7 +37,6 @@ for i in data.get('issues', []):
         print(i['key'])
 " "$issues_json" "$user_email")
 
-  parallel_cleanup 2>/dev/null || true
   parallel_init
   for key in $my_keys; do
     parallel_run "comments_${key}" cmd_comments "$key"
@@ -64,16 +58,15 @@ for i in data.get('issues', []):
   local adf_py
   adf_py="$(cd "$(dirname "${BASH_SOURCE[0]}")/../util" && pwd)/adf.py"
 
-  python3 - "$sprint_json" "$issues_json" "$recent_json" "$comments_combined" "$user_email" "$adf_py" <<'PYEOF'
+  python3 - "$sprint_json" "$issues_json" "$comments_combined" "$user_email" "$adf_py" <<'PYEOF'
 import json, sys, importlib.util
 from datetime import datetime, timedelta, timezone
 
 sprint = json.loads(sys.argv[1])
 all_issues = json.loads(sys.argv[2])
-recent_data = json.loads(sys.argv[3])
-all_comments = json.loads(sys.argv[4])
-user_email = sys.argv[5]
-adf_py_path = sys.argv[6]
+all_comments = json.loads(sys.argv[3])
+user_email = sys.argv[4]
+adf_py_path = sys.argv[5]
 
 spec = importlib.util.spec_from_file_location("adf", adf_py_path)
 adf_mod = importlib.util.module_from_spec(spec)

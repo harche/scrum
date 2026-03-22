@@ -15,6 +15,7 @@ source "${SCRIPT_DIR}/lib/api/sprint.sh"
 source "${SCRIPT_DIR}/lib/api/comment.sh"
 source "${SCRIPT_DIR}/lib/api/transition.sh"
 source "${SCRIPT_DIR}/lib/api/fields.sh"
+source "${SCRIPT_DIR}/lib/api/health.sh"
 
 # Load utilities if available
 [[ -f "${SCRIPT_DIR}/lib/util/retry.sh" ]]    && source "${SCRIPT_DIR}/lib/util/retry.sh"
@@ -45,6 +46,7 @@ Low-level API commands:
   transitions <ISSUE-KEY>           Get available transitions
   transition <id> <KEY...>          Perform a transition on one or more issues
   close [comment] <KEY...>          Comment (optional) + close one or more issues
+  health-check                      Validate custom field IDs against Jira metadata
 
 High-level composite commands:
   sprint-dashboard <team>           Sprint info + issues by status + workload + blockers
@@ -80,6 +82,7 @@ case "${1:-help}" in
   transitions)    cmd_transitions "${2:?ISSUE-KEY required}" ;;
   transition)     cmd_transition "${2:?Transition ID required}" "${@:3}" ;;
   close)          cmd_close "${@:2}" ;;
+  health-check)   cmd_health_check ;;
 
   # High-level composite commands
   sprint-dashboard)  cmd_sprint_dashboard "${@:2}" ;;

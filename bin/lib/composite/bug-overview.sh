@@ -1,6 +1,6 @@
 #!/bin/bash
-# Composite: bug-overview <team> [--stream]
-# Runs 6+ bug searches in parallel, returns categorized bug data
+# Composite: bug-overview <team>
+# Fetches all open bugs in 3 queries (was 7), categorizes in Python
 # Serves: /bug-triage, /my-bugs
 
 [[ -n "${_COMPOSITE_BUG_OVERVIEW_LOADED:-}" ]] && return 0
@@ -20,57 +20,35 @@ cmd_bug_overview() {
   local assignee_emails
   assignee_emails=$(echo "$roster_json" | python3 -c "
 import json, sys
-# We need emails, but roster only has names/github handles.
-# Build a JQL-compatible list of display names for assignee matching.
 members = json.load(sys.stdin)
 names = [m['name'] for m in members]
-# JQL assignee filter using displayName via 'assignee in membersOf()' won't work,
-# so we build an OR clause: assignee = 'Name1' OR assignee = 'Name2' ...
 clauses = ' OR '.join(f'assignee = \"{n}\"' for n in names)
 print(clauses)
 ")
 
-  # ── Run all searches in parallel ─────────────────────────────────────────
+  # ── Extended fields: include SFDC counter for escalation categorization ──
+  local bug_fields="[\"key\",\"summary\",\"status\",\"assignee\",\"priority\",\"issuetype\",\"fixVersions\",\"components\",\"${CF_STORY_POINTS}\",\"${CF_RELEASE_BLOCKER}\",\"${CF_SFDC_COUNTER}\"]"
+
+  # ── 3 queries (was 7): all_open covers untriaged/unassigned/blockers/escalations
   parallel_init
 
-  # Untriaged: priority Undefined or Unprioritized
-  parallel_run "untriaged" cmd_search \
-    "project = OCPBUGS AND ${comp_filter} AND priority in (Undefined, Unprioritized) AND status not in (Closed, Done, Verified) ORDER BY created DESC" 50
+  parallel_run "all_open" cmd_search \
+    "project = OCPBUGS AND ${comp_filter} AND status not in (Closed, Done, Verified) ORDER BY priority ASC, created DESC" 200 "$bug_fields"
 
-  # Unassigned
-  parallel_run "unassigned" cmd_search \
-    "project = OCPBUGS AND ${comp_filter} AND assignee is EMPTY AND status not in (Closed, Done, Verified) ORDER BY priority ASC, created DESC" 50
-
-  # Release blocker proposals
-  parallel_run "blocker_proposals" cmd_search \
-    "project = OCPBUGS AND ${comp_filter} AND \"Release Blocker\" = \"Proposed\" AND status not in (Closed, Done, Verified) ORDER BY priority ASC" 50
-
-  # Customer escalations (SFDC cases)
-  parallel_run "escalations" cmd_search \
-    "project = OCPBUGS AND ${comp_filter} AND \"SFDC Cases Counter\" is not EMPTY AND status not in (Closed, Done, Verified) ORDER BY priority ASC" 50
-
-  # New bugs this week
+  # New bugs this week (includes closed, so can't merge with all_open)
   parallel_run "new_this_week" cmd_search \
     "project = OCPBUGS AND ${comp_filter} AND created >= -7d ORDER BY created DESC" 50
 
-  # All open bugs (by component)
-  parallel_run "all_open" cmd_search \
-    "project = OCPBUGS AND ${comp_filter} AND status not in (Closed, Done, Verified) ORDER BY priority ASC, created DESC" 100
-
-  # Bugs assigned to team members outside ALL Node components (truly out-of-scope or untagged)
+  # Bugs assigned to team members outside ALL Node components
   parallel_run "team_no_component" cmd_search \
     "project = OCPBUGS AND (${assignee_emails}) AND (component is EMPTY OR component not in (${ALL_NODE_COMPONENTS})) AND status not in (Closed, Done, Verified) ORDER BY priority ASC, created DESC" 50
 
   parallel_wait_all || true
 
-  # ── Assemble results ────────────────────────────────────────────────────
+  # ── Assemble results — categorize from all_open in Python ────────────────
   python3 - \
-    "$(parallel_get untriaged)" \
-    "$(parallel_get unassigned)" \
-    "$(parallel_get blocker_proposals)" \
-    "$(parallel_get escalations)" \
-    "$(parallel_get new_this_week)" \
     "$(parallel_get all_open)" \
+    "$(parallel_get new_this_week)" \
     "$(parallel_get team_no_component)" \
     <<'PYEOF'
 import json, sys
@@ -81,6 +59,7 @@ def extract_bugs(data_str):
     for i in data.get("issues", []):
         f = i.get("fields", {})
         components = [c.get("name", "") for c in (f.get("components") or [])]
+        rb = f.get("customfield_10847")
         bugs.append({
             "key": i.get("key", ""),
             "summary": f.get("summary", ""),
@@ -88,19 +67,38 @@ def extract_bugs(data_str):
             "priority": f.get("priority", {}).get("name", ""),
             "assignee": (f.get("assignee") or {}).get("displayName", "Unassigned"),
             "points": f.get("customfield_10028") or 0,
-            "releaseBlocker": f.get("customfield_10847"),
+            "releaseBlocker": rb,
             "fixVersions": [v.get("name", "") for v in (f.get("fixVersions") or [])],
             "components": components,
+            "sfdcCaseCount": f.get("customfield_10978"),
         })
     return bugs
 
-untriaged = extract_bugs(sys.argv[1])
-unassigned = extract_bugs(sys.argv[2])
-blocker_proposals = extract_bugs(sys.argv[3])
-escalations = extract_bugs(sys.argv[4])
-new_this_week = extract_bugs(sys.argv[5])
-all_open = extract_bugs(sys.argv[6])
-missing_component = extract_bugs(sys.argv[7])
+all_open = extract_bugs(sys.argv[1])
+new_this_week = extract_bugs(sys.argv[2])
+missing_component = extract_bugs(sys.argv[3])
+
+# Shape assertions — warn if field formats have changed
+for b in all_open[:5]:  # spot-check first 5
+    rb = b.get("releaseBlocker")
+    if rb is not None and not isinstance(rb, dict):
+        print(f"SHAPE WARNING: releaseBlocker is {type(rb).__name__}, expected dict or None "
+              f"(on {b['key']}). Blocker categorization may be broken.", file=sys.stderr)
+        break
+
+# Categorize from all_open (was 4 separate JQL queries)
+untriaged = [b for b in all_open if b["priority"] in ("Undefined", "Unprioritized")]
+unassigned = [b for b in all_open if b["assignee"] == "Unassigned"]
+blocker_proposals = [b for b in all_open
+                     if isinstance(b.get("releaseBlocker"), dict)
+                     and b["releaseBlocker"].get("value") == "Proposed"]
+escalations = [b for b in all_open if b.get("sfdcCaseCount") is not None]
+
+# Canary: if we have bugs but nothing categorized, field formats may have changed
+if len(all_open) > 10 and (len(untriaged) + len(unassigned) + len(blocker_proposals) + len(escalations)) == 0:
+    print(f"CANARY: {len(all_open)} open bugs but 0 categorized. "
+          f"Check releaseBlocker (customfield_10847), sfdcCaseCount (customfield_10978), "
+          f"priority values.", file=sys.stderr)
 
 # Merge missing-component bugs into allOpen (deduplicated)
 all_open_keys = {b["key"] for b in all_open}

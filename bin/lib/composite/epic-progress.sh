@@ -1,6 +1,7 @@
 #!/bin/bash
 # Composite: epic-progress <team>
 # Epics the current user is contributing to, with children progress
+# 2 bulk queries for all epics (was 2 per epic — 2N total)
 # Serves: /my-epics
 
 [[ -n "${_COMPOSITE_EPIC_PROGRESS_LOADED:-}" ]] && return 0
@@ -51,34 +52,37 @@ print(json.dumps({'sprint': {'id': sprint['id'], 'name': sprint['name']}, 'epics
     return 0
   fi
 
-  # Fetch all epics + their children in parallel
-  parallel_init
+  # Build comma-separated key lists for bulk JQL
+  local keys_csv keys_quoted
+  keys_csv=$(echo "$epic_keys" | tr '\n' ',' | sed 's/,$//')
+  keys_quoted=$(echo "$epic_keys" | sed 's/.*/"&"/' | tr '\n' ',' | sed 's/,$//')
 
-  for ek in $epic_keys; do
-    parallel_run "epic_${ek}" cmd_get "$ek"
-    parallel_run "children_${ek}" cmd_search "\"Epic Link\" = \"${ek}\" ORDER BY status ASC" 100
-  done
+  # 2 bulk queries (was 2 per epic)
+  parallel_init
+  parallel_run "epics" cmd_search "key in (${keys_csv})" 50
+  parallel_run "children" cmd_search "\"Epic Link\" in (${keys_quoted}) ORDER BY status ASC" 200
   parallel_wait_all 2>/dev/null || true
 
-  # Collect epic data
-  local epics_combined="{"
-  local first=true
-  for ek in $epic_keys; do
-    local epic_data children_data
-    epic_data=$(parallel_get "epic_${ek}" 2>/dev/null)
-    children_data=$(parallel_get "children_${ek}" 2>/dev/null)
-    [[ "$first" == "true" ]] && first=false || epics_combined+=","
-    epics_combined+="\"${ek}\":{\"epic\":${epic_data},\"children\":${children_data}}"
-  done
-  epics_combined+="}"
-
-  python3 - "$sprint_json" "$issues_json" "$epics_combined" "$user_email" <<'PYEOF'
+  python3 - "$sprint_json" "$issues_json" "$(parallel_get epics)" "$(parallel_get children)" "$user_email" <<'PYEOF'
 import json, sys
 
 sprint = json.loads(sys.argv[1])
 all_issues = json.loads(sys.argv[2])
 epics_data = json.loads(sys.argv[3])
-user_email = sys.argv[4]
+children_data = json.loads(sys.argv[4])
+user_email = sys.argv[5]
+
+# Build epic map by key
+epic_map = {}
+for e in epics_data.get("issues", []):
+    epic_map[e["key"]] = e
+
+# Group children by epic link
+children_by_epic = {}
+for c in children_data.get("issues", []):
+    ek = c.get("fields", {}).get("customfield_10014")
+    if ek:
+        children_by_epic.setdefault(ek, []).append(c)
 
 # My sprint items by epic
 my_sprint_items = {}
@@ -99,10 +103,10 @@ for i in all_issues.get("issues", []):
         my_sprint_items.setdefault(ek, []).append(item)
 
 epics_out = []
-for ek, edata in epics_data.items():
-    epic = edata.get("epic", {})
-    children_resp = edata.get("children", {})
+for ek in sorted(epic_map.keys()):
+    epic = epic_map[ek]
     ef = epic.get("fields", {})
+    epic_children = children_by_epic.get(ek, [])
 
     children = []
     done_count = 0
@@ -110,7 +114,7 @@ for ek, edata in epics_data.items():
     todo_count = 0
     total_children = 0
 
-    for child in children_resp.get("issues", []):
+    for child in epic_children:
         cf = child.get("fields", {})
         sc = cf.get("status", {}).get("statusCategory", {}).get("key", "")
         total_children += 1

@@ -35,4 +35,7 @@ Team Member commands:
 
 Meta commands:
   /self-improvement     — Review session errors and propose workspace fixes
+
+Maintenance:
+  bin/jira.sh health-check  — Validate Jira field IDs (run if commands return empty results)
 EOF

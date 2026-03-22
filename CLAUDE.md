@@ -21,11 +21,11 @@ Based on the selection, use the corresponding config from the table below:
 Always use the REST API helper at `bin/jira.sh` for Jira operations (not `acli`).
 
 ```bash
-# Search issues (returns JSON)
-bin/jira.sh search '<JQL>'
+# Search issues (returns JSON; optional custom fields JSON as 3rd arg)
+bin/jira.sh search '<JQL>' [limit] [fields_json]
 
-# Get a single issue (all fields)
-bin/jira.sh get <ISSUE-KEY>
+# Get a single issue (optionally limit fields with comma-separated list)
+bin/jira.sh get <ISSUE-KEY> [fields]
 
 # List sprints (state: active|future|closed, default: active)
 bin/jira.sh sprints [state]
@@ -53,6 +53,9 @@ bin/jira.sh close [comment] <ISSUE-KEY> [<ISSUE-KEY>...]
 
 # Add a comment to one or more issues
 bin/jira.sh comment <body> <ISSUE-KEY> [<ISSUE-KEY>...]
+
+# Validate custom field IDs against Jira metadata
+bin/jira.sh health-check
 ```
 
 All output is JSON. `bin/jira.sh` uses the Agile REST API (`/rest/agile/1.0/`) for sprint and sprint-issues queries, and REST API v3 (`/rest/api/3/`) for everything else.
@@ -102,13 +105,16 @@ bin/jira.sh epic-progress <team>
 
 # Pickup — all available unassigned work (serves /pickup)
 bin/jira.sh pickup-data <team>
+
+# Health check — validate custom field IDs, names, and types against Jira
+bin/jira.sh health-check
 ```
 
 `<team>` accepts: `"Node Devices"`, `"Node Core"`, `"dra"`, `"core"` (case-sensitive).
 
 ### GitHub Activity Commands
 
-`bin/gh-activity.sh` provides composite GitHub commands:
+`bin/gh-activity.sh` provides composite GitHub commands using **GraphQL batching** (each command makes a single GraphQL call instead of multiple REST calls; `team-prs` batches members in groups of 6):
 
 ```bash
 bin/gh-activity.sh my-prs <handle>         # My PRs + review requests (serves /my-prs)
@@ -122,11 +128,11 @@ bin/gh-activity.sh member-prs <handle>     # One member's activity (serves /team
 
 ```
 bin/jira.sh              — Thin dispatcher (sources all modules)
-bin/gh-activity.sh       — GitHub activity composite commands
+bin/gh-activity.sh       — GitHub activity (GraphQL batching)
 bin/gh-discussion.sh     — GitHub Discussions publish/comment
 bin/lib/core.sh          — Auth, HTTP, constants, logging
 bin/lib/team.sh          — Team config resolution
-bin/lib/api/*.sh         — Low-level API commands (issue, sprint, comment, transition, fields)
+bin/lib/api/*.sh         — Low-level API commands (issue, sprint, comment, transition, fields, health)
 bin/lib/composite/*.sh   — High-level Jira composite commands
 bin/lib/util/adf.py      — ADF-to-text converter
 bin/lib/util/parallel.sh — Background job management + streaming
@@ -134,6 +140,31 @@ bin/lib/util/retry.sh    — Exponential backoff + rate limiting
 bin/lib/util/cache.sh    — Sprint caching (5-min TTL)
 tests/                   — bats-core tests (run: bats tests/test-*.bats)
 ```
+
+## API Optimization & Health
+
+### Query Consolidation
+
+Composite commands minimize API calls by fetching broader datasets and categorizing in Python:
+- **bug-overview:** 3 queries (was 7) — fetches all open bugs once, categorizes untriaged/unassigned/blockers/escalations in Python
+- **epic-progress:** 2 queries (was 2N) — uses `key in (...)` bulk JQL instead of per-epic fetches
+- **release-data:** 2 queries (was 4) — merges blocker queries into single all-bugs query
+- **pickup-data:** 2 queries (was 3) — merges bugs + escalations
+- **standup-data / my-standup-data:** removed redundant "recent" searches
+
+### Field Limiting
+
+`cmd_search()`, `cmd_get()`, and `cmd_sprint_issues()` accept optional `fields` parameters to request only needed fields, reducing payload size. Composite commands pass custom field lists where they need non-default fields (e.g., SFDC counter for escalation detection).
+
+### Health Check
+
+`bin/jira.sh health-check` validates all 10 custom field IDs against Jira's `/rest/api/3/field` metadata. Reports `HEALTHY`, `DEGRADED` (field renamed/type changed), or `UNHEALTHY` (field missing). Run periodically to catch API drift.
+
+### Runtime Validation
+
+Composite commands that do client-side categorization include:
+- **Shape assertions:** warn on stderr if field values have unexpected types (e.g., `releaseBlocker` is a string instead of a dict)
+- **Canary warnings:** warn on stderr if categorization produces suspicious results (e.g., 50 open bugs but 0 categorized — likely a field format change)
 
 ## Board & Sprint Info
 

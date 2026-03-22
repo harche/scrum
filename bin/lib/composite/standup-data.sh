@@ -1,6 +1,7 @@
 #!/bin/bash
 # Composite: standup-data <team> [--stream]
 # Returns sprint dashboard + recent updates + new bugs + per-member comments
+# 2 data queries (was 3 — removed redundant "recent" search, derived from updated field)
 # Serves: /standup, /my-standup, /team-member
 
 [[ -n "${_COMPOSITE_STANDUP_DATA_LOADED:-}" ]] && return 0
@@ -23,19 +24,17 @@ cmd_standup_data() {
   local sprint_id
   sprint_id=$(echo "$sprint_json" | python3 -c "import json,sys; print(json.load(sys.stdin)['id'])")
 
-  # ── Parallel: sprint issues + recent updates + new bugs + roster ─────────
+  # ── Parallel: sprint issues (with updated field) + new bugs + roster ────
   parallel_init
 
-  parallel_run "issues" cmd_sprint_issues "$sprint_id"
-  parallel_run "recent" cmd_search "sprint = ${sprint_id} AND updated >= -7d ORDER BY updated DESC" 50
+  parallel_run "issues" cmd_sprint_issues "$sprint_id" 100 "${ISSUE_FIELDS},updated"
   parallel_run "new_bugs" cmd_search "project = OCPBUGS AND component in (${TEAM_BUG_COMPONENTS}) AND created >= -7d ORDER BY created DESC" 50
   parallel_run "roster" team_roster "$team"
 
   parallel_wait_all || true
 
-  local issues_json recent_json bugs_json roster_json
+  local issues_json bugs_json roster_json
   issues_json=$(parallel_get "issues")
-  recent_json=$(parallel_get "recent")
   bugs_json=$(parallel_get "new_bugs")
   roster_json=$(parallel_get "roster")
 
@@ -84,18 +83,17 @@ print(' '.join(keys))
   local adf_py
   adf_py="$(cd "$(dirname "${BASH_SOURCE[0]}")/../util" && pwd)/adf.py"
 
-  python3 - "$sprint_json" "$roster_json" "$recent_json" "$bugs_json" "$comments_combined" "$adf_py" "$issues_json" <<'PYEOF'
+  python3 - "$sprint_json" "$roster_json" "$bugs_json" "$comments_combined" "$adf_py" "$issues_json" <<'PYEOF'
 import json, sys, importlib.util
 from datetime import datetime, timedelta, timezone
 from collections import Counter
 
 sprint = json.loads(sys.argv[1])
 roster = json.loads(sys.argv[2])
-recent_data = json.loads(sys.argv[3])
-bugs_data = json.loads(sys.argv[4])
-all_comments = json.loads(sys.argv[5])
-adf_py_path = sys.argv[6]
-data = json.loads(sys.argv[7])
+bugs_data = json.loads(sys.argv[3])
+all_comments = json.loads(sys.argv[4])
+adf_py_path = sys.argv[5]
+data = json.loads(sys.argv[6])
 issues = data.get("issues", [])
 
 # Load ADF converter
@@ -121,6 +119,7 @@ done_points = 0
 blocked_items = []
 at_risk = []
 discussion_topics = []
+_shape_warned = set()
 
 for issue in issues:
     f = issue.get("fields", {})
@@ -132,7 +131,12 @@ for issue in issues:
     points = f.get("customfield_10028") or 0
     issue_type = f.get("issuetype", {}).get("name", "")
     priority = f.get("priority", {}).get("name", "")
-    blocked_val = (f.get("customfield_10517") or {}).get("value", "False")
+    blocked_raw = f.get("customfield_10517")
+    if blocked_raw is not None and not isinstance(blocked_raw, dict) and "blocked" not in _shape_warned:
+        print(f"SHAPE WARNING: Blocked field (customfield_10517) is {type(blocked_raw).__name__}, "
+              f"expected dict or None (on {key}). Blocker detection may be broken.", file=sys.stderr)
+        _shape_warned.add("blocked")
+    blocked_val = (blocked_raw or {}).get("value", "False") if isinstance(blocked_raw, dict) else "False"
     release_blocker = f.get("customfield_10847")
 
     total_points += points
@@ -214,8 +218,17 @@ for bug in bugs_data.get("issues", []):
         "assignee": (bf.get("assignee") or {}).get("displayName", "Unassigned"),
     })
 
-# Recent updates (already in sprint — just extract keys for reference)
-recent_keys = [i.get("key", "") for i in recent_data.get("issues", [])]
+# Recently updated keys (derived from sprint issues' updated field — was a separate query)
+recent_keys = []
+for issue in issues:
+    updated = issue.get("fields", {}).get("updated", "")
+    if updated:
+        try:
+            dt = datetime.fromisoformat(updated.replace("Z", "+00:00"))
+            if dt >= cutoff:
+                recent_keys.append(issue.get("key", ""))
+        except (ValueError, TypeError):
+            pass
 
 # Build roster
 roster_out = []

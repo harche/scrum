@@ -1,175 +1,228 @@
 #!/bin/bash
 # GitHub activity helper — composite commands for PR/issue data
-# Uses the `gh` CLI. All output is JSON.
+# Uses GraphQL via `gh api graphql` for efficient batching. All output is JSON.
+#
+# Call savings vs REST:
+#   my-prs:       3 REST → 1 GraphQL
+#   my-issues:    3 REST → 1 GraphQL
+#   review-queue: 2 REST → 1 GraphQL
+#   member-prs:   3 REST → 1 GraphQL
+#   team-prs:     N×3 REST → ceil(N/6) GraphQL
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
-_gh_search_prs() {
-  gh search prs "$@" --json repository,title,state,url,author,createdAt,updatedAt,isDraft 2>/dev/null || echo '[]'
-}
-
-_gh_search_issues() {
-  gh search issues "$@" --json repository,title,state,url,author,createdAt,updatedAt,labels 2>/dev/null || echo '[]'
+_date_days_ago() {
+  local days="${1:-7}"
+  date -v-${days}d +%Y-%m-%d 2>/dev/null || date -d "${days} days ago" +%Y-%m-%d 2>/dev/null
 }
 
 # ── my-prs <github-handle> ────────────────────────────────────────────────────
 # Authored PRs, review requests for me, recently merged
+# 1 GraphQL call (was 3 REST)
 cmd_my_prs() {
   local handle="${1:?GitHub handle required}"
-  local tmpdir
-  tmpdir=$(mktemp -d)
-  trap "rm -rf '$tmpdir'" RETURN
+  local since
+  since=$(_date_days_ago 7)
 
-  # Parallel: authored open + authored merged + review-requested
-  (gh search prs --author="$handle" --state=open --sort=updated --limit=30 \
-    --json repository,title,state,url,author,createdAt,updatedAt,isDraft 2>/dev/null || echo '[]') > "$tmpdir/authored_open.json" &
+  python3 - "$handle" "$since" <<'PYEOF'
+import json, subprocess, sys
 
-  (gh search prs --author="$handle" --state=merged --sort=updated --limit=10 --merged=">=$(date -v-7d +%Y-%m-%d 2>/dev/null || date -d '7 days ago' +%Y-%m-%d 2>/dev/null)" \
-    --json repository,title,state,url,createdAt,closedAt 2>/dev/null || echo '[]') > "$tmpdir/authored_merged.json" &
+handle, since = sys.argv[1], sys.argv[2]
 
-  (gh search prs --review-requested="$handle" --state=open --sort=updated --limit=20 \
-    --json repository,title,state,url,author,createdAt,updatedAt 2>/dev/null || echo '[]') > "$tmpdir/review_requested.json" &
+PR = """... on PullRequest {
+  title url state createdAt updatedAt closedAt isDraft
+  repository { nameWithOwner }
+  author { login }
+}"""
 
-  wait
+query = """{
+  authoredOpen: search(query: "author:%s is:pr is:open sort:updated", type: ISSUE, first: 30) {
+    nodes { %s }
+  }
+  authoredMerged: search(query: "author:%s is:pr is:merged merged:>=%s sort:updated", type: ISSUE, first: 10) {
+    nodes { %s }
+  }
+  reviewRequested: search(query: "review-requested:%s is:pr is:open sort:updated", type: ISSUE, first: 20) {
+    nodes { %s }
+  }
+}""" % (handle, PR, handle, since, PR, handle, PR)
 
-  python3 -c "
-import json
-with open('$tmpdir/authored_open.json') as f: authored_open = json.load(f)
-with open('$tmpdir/authored_merged.json') as f: authored_merged = json.load(f)
-with open('$tmpdir/review_requested.json') as f: review_requested = json.load(f)
+proc = subprocess.run(['gh', 'api', 'graphql', '-f', f'query={query}'],
+                      capture_output=True, text=True)
+if proc.returncode != 0:
+    print(json.dumps({'authoredOpen': [], 'authoredMerged': [], 'reviewRequested': [],
+                      'summary': {'openPRs': 0, 'recentlyMerged': 0, 'reviewRequests': 0},
+                      'error': proc.stderr.strip()}))
+    sys.exit(0)
 
-def fmt(prs):
-    return [{'repo': p.get('repository',{}).get('nameWithOwner',''), 'title': p.get('title',''),
-             'state': p.get('state',''), 'url': p.get('url',''),
-             'author': p.get('author',{}).get('login',''),
-             'createdAt': p.get('createdAt',''), 'updatedAt': p.get('updatedAt',''),
-             'closedAt': p.get('closedAt',''),
-             'isDraft': p.get('isDraft', False)} for p in prs]
+data = json.loads(proc.stdout).get('data', {})
 
-result = {
-    'authoredOpen': fmt(authored_open),
-    'authoredMerged': fmt(authored_merged),
-    'reviewRequested': fmt(review_requested),
-    'summary': {
-        'openPRs': len(authored_open),
-        'recentlyMerged': len(authored_merged),
-        'reviewRequests': len(review_requested),
-    },
-}
-print(json.dumps(result))
-"
+def fmt(nodes):
+    return [{'repo': p.get('repository', {}).get('nameWithOwner', ''),
+             'title': p.get('title', ''),
+             'state': p.get('state', '').lower(),
+             'url': p.get('url', ''),
+             'author': (p.get('author') or {}).get('login', ''),
+             'createdAt': p.get('createdAt', ''),
+             'updatedAt': p.get('updatedAt', ''),
+             'closedAt': p.get('closedAt', ''),
+             'isDraft': p.get('isDraft', False)} for p in nodes]
+
+ao = data.get('authoredOpen', {}).get('nodes', [])
+am = data.get('authoredMerged', {}).get('nodes', [])
+rr = data.get('reviewRequested', {}).get('nodes', [])
+
+print(json.dumps({
+    'authoredOpen': fmt(ao),
+    'authoredMerged': fmt(am),
+    'reviewRequested': fmt(rr),
+    'summary': {'openPRs': len(ao), 'recentlyMerged': len(am), 'reviewRequests': len(rr)},
+}))
+PYEOF
 }
 
 # ── my-issues <github-handle> ─────────────────────────────────────────────────
 # Issues authored, assigned, recently commented
+# 1 GraphQL call (was 3 REST)
 cmd_my_issues() {
   local handle="${1:?GitHub handle required}"
-  local tmpdir
-  tmpdir=$(mktemp -d)
-  trap "rm -rf '$tmpdir'" RETURN
+  local since
+  since=$(_date_days_ago 14)
 
-  (gh search issues --author="$handle" --state=open --sort=updated --limit=20 \
-    --json repository,title,state,url,createdAt,updatedAt,labels 2>/dev/null || echo '[]') > "$tmpdir/authored.json" &
+  python3 - "$handle" "$since" <<'PYEOF'
+import json, subprocess, sys
 
-  (gh search issues --assignee="$handle" --state=open --sort=updated --limit=20 \
-    --json repository,title,state,url,author,createdAt,updatedAt,labels 2>/dev/null || echo '[]') > "$tmpdir/assigned.json" &
+handle, since = sys.argv[1], sys.argv[2]
 
-  (gh search issues --commenter="$handle" --state=open --sort=updated --limit=20 --updated=">=$(date -v-14d +%Y-%m-%d 2>/dev/null || date -d '14 days ago' +%Y-%m-%d 2>/dev/null)" \
-    --json repository,title,state,url,author,createdAt,updatedAt 2>/dev/null || echo '[]') > "$tmpdir/commented.json" &
+ISS = """... on Issue {
+  title url state createdAt updatedAt
+  repository { nameWithOwner }
+  author { login }
+  labels(first: 10) { nodes { name } }
+}"""
 
-  wait
+query = """{
+  authored: search(query: "author:%s is:issue is:open sort:updated", type: ISSUE, first: 20) {
+    nodes { %s }
+  }
+  assigned: search(query: "assignee:%s is:issue is:open sort:updated", type: ISSUE, first: 20) {
+    nodes { %s }
+  }
+  commented: search(query: "commenter:%s is:issue is:open updated:>=%s sort:updated", type: ISSUE, first: 20) {
+    nodes { %s }
+  }
+}""" % (handle, ISS, handle, ISS, handle, since, ISS)
 
-  python3 -c "
-import json
-with open('$tmpdir/authored.json') as f: authored = json.load(f)
-with open('$tmpdir/assigned.json') as f: assigned = json.load(f)
-with open('$tmpdir/commented.json') as f: commented = json.load(f)
+proc = subprocess.run(['gh', 'api', 'graphql', '-f', f'query={query}'],
+                      capture_output=True, text=True)
+if proc.returncode != 0:
+    print(json.dumps({'authored': [], 'assigned': [], 'commented': [],
+                      'summary': {'authored': 0, 'assigned': 0, 'commented': 0},
+                      'error': proc.stderr.strip()}))
+    sys.exit(0)
+
+data = json.loads(proc.stdout).get('data', {})
 
 def fmt(issues):
-    return [{'repo': i.get('repository',{}).get('nameWithOwner',''), 'title': i.get('title',''),
-             'state': i.get('state',''), 'url': i.get('url',''),
-             'author': i.get('author',{}).get('login',''),
-             'createdAt': i.get('createdAt',''), 'updatedAt': i.get('updatedAt',''),
-             'labels': [l.get('name','') for l in i.get('labels',[])]} for i in issues]
+    return [{'repo': i.get('repository', {}).get('nameWithOwner', ''),
+             'title': i.get('title', ''),
+             'state': i.get('state', '').lower(),
+             'url': i.get('url', ''),
+             'author': (i.get('author') or {}).get('login', ''),
+             'createdAt': i.get('createdAt', ''),
+             'updatedAt': i.get('updatedAt', ''),
+             'labels': [l.get('name', '') for l in i.get('labels', {}).get('nodes', [])]}
+            for i in issues]
 
-# Deduplicate by URL
-seen = set()
-all_issues = []
-for i in authored + assigned + commented:
-    url = i.get('url','')
-    if url not in seen:
-        seen.add(url)
-        all_issues.append(i)
+authored = data.get('authored', {}).get('nodes', [])
+assigned = data.get('assigned', {}).get('nodes', [])
+commented = data.get('commented', {}).get('nodes', [])
 
-result = {
+print(json.dumps({
     'authored': fmt(authored),
     'assigned': fmt(assigned),
     'commented': fmt(commented),
-    'summary': {
-        'authored': len(authored),
-        'assigned': len(assigned),
-        'commented': len(commented),
-    },
-}
-print(json.dumps(result))
-"
+    'summary': {'authored': len(authored), 'assigned': len(assigned), 'commented': len(commented)},
+}))
+PYEOF
 }
 
 # ── review-queue <github-handle> ──────────────────────────────────────────────
 # PRs awaiting my review, prioritized by age
+# 1 GraphQL call (was 2 REST)
 cmd_review_queue() {
   local handle="${1:?GitHub handle required}"
-  local tmpdir
-  tmpdir=$(mktemp -d)
-  trap "rm -rf '$tmpdir'" RETURN
 
-  (gh search prs --review-requested="$handle" --state=open --sort=created --limit=30 \
-    --json repository,title,state,url,author,createdAt,updatedAt,isDraft 2>/dev/null || echo '[]') > "$tmpdir/requested.json" &
-
-  (gh search prs --mentions="$handle" --state=open --sort=updated --limit=10 \
-    --json repository,title,state,url,author,createdAt,updatedAt 2>/dev/null || echo '[]') > "$tmpdir/mentions.json" &
-
-  wait
-
-  python3 -c "
-import json
+  python3 - "$handle" <<'PYEOF'
+import json, subprocess, sys
 from datetime import datetime, timezone
-with open('$tmpdir/requested.json') as f: requested = json.load(f)
-with open('$tmpdir/mentions.json') as f: mentions = json.load(f)
+
+handle = sys.argv[1]
+
+PR = """... on PullRequest {
+  title url state createdAt updatedAt isDraft
+  repository { nameWithOwner }
+  author { login }
+}"""
+
+query = """{
+  reviewRequested: search(query: "review-requested:%s is:pr is:open sort:created", type: ISSUE, first: 30) {
+    nodes { %s }
+  }
+  mentioned: search(query: "mentions:%s is:pr is:open sort:updated", type: ISSUE, first: 10) {
+    nodes { %s }
+  }
+}""" % (handle, PR, handle, PR)
+
+proc = subprocess.run(['gh', 'api', 'graphql', '-f', f'query={query}'],
+                      capture_output=True, text=True)
+if proc.returncode != 0:
+    print(json.dumps({'reviewRequested': [], 'mentioned': [],
+                      'summary': {'reviewRequested': 0, 'mentioned': 0},
+                      'error': proc.stderr.strip()}))
+    sys.exit(0)
+
+data = json.loads(proc.stdout).get('data', {})
 now = datetime.now(timezone.utc)
 
 def fmt(prs):
     result = []
     for p in prs:
-        created = p.get('createdAt','')
+        created = p.get('createdAt', '')
         age_days = 0
         try:
-            dt = datetime.fromisoformat(created.replace('Z','+00:00'))
+            dt = datetime.fromisoformat(created.replace('Z', '+00:00'))
             age_days = (now - dt).days
-        except: pass
+        except Exception:
+            pass
         result.append({
-            'repo': p.get('repository',{}).get('nameWithOwner',''),
-            'title': p.get('title',''), 'url': p.get('url',''),
-            'author': p.get('author',{}).get('login',''),
-            'createdAt': created, 'ageDays': age_days,
+            'repo': p.get('repository', {}).get('nameWithOwner', ''),
+            'title': p.get('title', ''),
+            'url': p.get('url', ''),
+            'author': (p.get('author') or {}).get('login', ''),
+            'createdAt': created,
+            'ageDays': age_days,
             'isDraft': p.get('isDraft', False),
         })
     return sorted(result, key=lambda x: -x['ageDays'])
 
-result = {
+requested = data.get('reviewRequested', {}).get('nodes', [])
+mentions = data.get('mentioned', {}).get('nodes', [])
+
+print(json.dumps({
     'reviewRequested': fmt(requested),
     'mentioned': fmt(mentions),
     'summary': {'reviewRequested': len(requested), 'mentioned': len(mentions)},
-}
-print(json.dumps(result))
-"
+}))
+PYEOF
 }
 
 # ── team-prs <roster-file> ────────────────────────────────────────────────────
 # GitHub activity for all team members (for standup-github)
+# ceil(N/6) GraphQL calls (was N×3 REST — e.g. 27 for DRA, 48 for Core)
 cmd_team_prs() {
   local roster_file="${1:?Roster file required}"
 
@@ -178,100 +231,163 @@ cmd_team_prs() {
     return 1
   fi
 
-  local tmpdir
-  tmpdir=$(mktemp -d)
-  trap "rm -rf '$tmpdir'" RETURN
-
   local since
-  since=$(date -v-7d +%Y-%m-%d 2>/dev/null || date -d '7 days ago' +%Y-%m-%d 2>/dev/null)
+  since=$(_date_days_ago 7)
 
-  # Launch parallel searches for each member
-  while IFS='|' read -r name handle; do
-    [[ -z "$handle" ]] && continue
-    (
-      authored=$(gh search prs --author="$handle" --updated=">=${since}" --sort=updated --limit=10 \
-        --json repository,title,state,url,createdAt,closedAt 2>/dev/null || echo '[]')
-      reviewed=$(gh search prs --reviewed-by="$handle" --updated=">=${since}" --sort=updated --limit=10 \
-        --json repository,title,url,author,state 2>/dev/null || echo '[]')
-      commented=$(gh search prs --commenter="$handle" --updated=">=${since}" --sort=updated --limit=5 \
-        --json repository,title,url,state 2>/dev/null || echo '[]')
+  python3 - "$roster_file" "$since" <<'PYEOF'
+import json, subprocess, sys
+from concurrent.futures import ThreadPoolExecutor
 
-      python3 -c "
-import json, sys
-name = sys.argv[1]; handle = sys.argv[2]
-authored = json.loads(sys.argv[3]); reviewed = json.loads(sys.argv[4]); commented = json.loads(sys.argv[5])
-result = {'name': name, 'github': handle,
-  'authored': len(authored), 'reviewed': len(reviewed), 'commented': len(commented),
-  'prs': [{'repo': p.get('repository',{}).get('nameWithOwner',''), 'title': p.get('title',''),
-           'state': p.get('state',''), 'url': p.get('url','')} for p in authored[:5]]}
-print(json.dumps(result))
-" "$name" "$handle" "$authored" "$reviewed" "$commented"
-    ) > "$tmpdir/${handle}.json" 2>/dev/null &
-  done < <(python3 -c "import json,sys; d=json.load(open(sys.argv[1])); [print(f'{n}|{h}') for n,h in d.get('members',{}).items()]" "$roster_file")
-  wait
+roster_file, since = sys.argv[1], sys.argv[2]
 
-  # Collect all results
-  python3 -c "
-import json, os, sys
-tmpdir = sys.argv[1]
-members = []
-for f in sorted(os.listdir(tmpdir)):
-    if f.endswith('.json'):
-        with open(os.path.join(tmpdir, f)) as fh:
-            try: members.append(json.load(fh))
-            except: pass
-members.sort(key=lambda m: m.get('authored',0) + m.get('reviewed',0), reverse=True)
-print(json.dumps({'members': members, 'summary': {'totalMembers': len(members)}}))
-" "$tmpdir"
+with open(roster_file) as f:
+    roster = json.load(f)
+members = [(name, handle) for name, handle in roster.get('members', {}).items() if handle]
+
+if not members:
+    print(json.dumps({'members': [], 'summary': {'totalMembers': 0}}))
+    sys.exit(0)
+
+PR = """... on PullRequest {
+  title url state
+  repository { nameWithOwner }
+  author { login }
+  createdAt closedAt
+}"""
+
+def build_batch_query(batch, since):
+    """Build a single GraphQL query covering multiple members."""
+    parts = []
+    for idx, (name, handle) in enumerate(batch):
+        alias = f'm{idx}'
+        parts.append(f"""
+  {alias}_authored: search(query: "author:{handle} is:pr updated:>={since} sort:updated", type: ISSUE, first: 10) {{
+    nodes {{ {PR} }}
+  }}
+  {alias}_reviewed: search(query: "reviewed-by:{handle} is:pr updated:>={since} sort:updated", type: ISSUE, first: 10) {{
+    nodes {{ {PR} }}
+  }}
+  {alias}_commented: search(query: "commenter:{handle} is:pr updated:>={since} sort:updated", type: ISSUE, first: 5) {{
+    nodes {{ {PR} }}
+  }}""")
+    return '{' + ''.join(parts) + '\n}'
+
+def run_batch(query):
+    """Execute a single batched GraphQL query."""
+    proc = subprocess.run(['gh', 'api', 'graphql', '-f', f'query={query}'],
+                          capture_output=True, text=True)
+    if proc.returncode != 0:
+        return {}
+    return json.loads(proc.stdout).get('data', {})
+
+# Batch members into groups of 6 (18 search aliases per query)
+batch_size = 6
+batches = [members[i:i+batch_size] for i in range(0, len(members), batch_size)]
+queries = [build_batch_query(batch, since) for batch in batches]
+
+# Run batches in parallel
+with ThreadPoolExecutor(max_workers=len(queries)) as executor:
+    results = list(executor.map(run_batch, queries))
+
+# Parse results
+all_members = []
+for batch_idx, batch in enumerate(batches):
+    data = results[batch_idx]
+    for idx, (name, handle) in enumerate(batch):
+        alias = f'm{idx}'
+        authored = data.get(f'{alias}_authored', {}).get('nodes', [])
+        reviewed = data.get(f'{alias}_reviewed', {}).get('nodes', [])
+        commented = data.get(f'{alias}_commented', {}).get('nodes', [])
+        all_members.append({
+            'name': name,
+            'github': handle,
+            'authored': len(authored),
+            'reviewed': len(reviewed),
+            'commented': len(commented),
+            'prs': [{'repo': p.get('repository', {}).get('nameWithOwner', ''),
+                     'title': p.get('title', ''),
+                     'state': p.get('state', '').lower(),
+                     'url': p.get('url', '')} for p in authored[:5]],
+        })
+
+all_members.sort(key=lambda m: m.get('authored', 0) + m.get('reviewed', 0), reverse=True)
+print(json.dumps({'members': all_members, 'summary': {'totalMembers': len(all_members)}}))
+PYEOF
 }
 
 # ── member-prs <github-handle> ────────────────────────────────────────────────
 # Individual member's GitHub activity
+# 1 GraphQL call (was 3 REST)
 cmd_member_prs() {
   local handle="${1:?GitHub handle required}"
   local since
-  since=$(date -v-7d +%Y-%m-%d 2>/dev/null || date -d '7 days ago' +%Y-%m-%d 2>/dev/null)
+  since=$(_date_days_ago 7)
 
-  local tmpdir
-  tmpdir=$(mktemp -d)
-  trap "rm -rf '$tmpdir'" RETURN
+  python3 - "$handle" "$since" <<'PYEOF'
+import json, subprocess, sys
 
-  (gh search prs --author="$handle" --updated=">=${since}" --sort=updated --limit=20 \
-    --json repository,title,state,url,createdAt,updatedAt,closedAt,isDraft 2>/dev/null || echo '[]') > "$tmpdir/authored.json" &
+handle, since = sys.argv[1], sys.argv[2]
 
-  (gh search prs --reviewed-by="$handle" --updated=">=${since}" --sort=updated --limit=20 \
-    --json repository,title,url,author,state 2>/dev/null || echo '[]') > "$tmpdir/reviewed.json" &
+PR = """... on PullRequest {
+  title url state createdAt updatedAt closedAt isDraft
+  repository { nameWithOwner }
+  author { login }
+}"""
 
-  (gh search issues --author="$handle" --updated=">=${since}" --sort=updated --limit=10 \
-    --json repository,title,state,url,createdAt,updatedAt 2>/dev/null || echo '[]') > "$tmpdir/issues.json" &
+ISS = """... on Issue {
+  title url state createdAt updatedAt
+  repository { nameWithOwner }
+}"""
 
-  wait
+query = """{
+  authored: search(query: "author:%s is:pr updated:>=%s sort:updated", type: ISSUE, first: 20) {
+    nodes { %s }
+  }
+  reviewed: search(query: "reviewed-by:%s is:pr updated:>=%s sort:updated", type: ISSUE, first: 20) {
+    nodes { %s }
+  }
+  issues: search(query: "author:%s is:issue updated:>=%s sort:updated", type: ISSUE, first: 10) {
+    nodes { %s }
+  }
+}""" % (handle, since, PR, handle, since, PR, handle, since, ISS)
 
-  python3 -c "
-import json
-with open('$tmpdir/authored.json') as f: authored = json.load(f)
-with open('$tmpdir/reviewed.json') as f: reviewed = json.load(f)
-with open('$tmpdir/issues.json') as f: issues = json.load(f)
+proc = subprocess.run(['gh', 'api', 'graphql', '-f', f'query={query}'],
+                      capture_output=True, text=True)
+if proc.returncode != 0:
+    print(json.dumps({'authored': [], 'reviewed': [], 'issues': [],
+                      'summary': {'authored': 0, 'reviewed': 0, 'issues': 0},
+                      'error': proc.stderr.strip()}))
+    sys.exit(0)
+
+data = json.loads(proc.stdout).get('data', {})
 
 def fmt_prs(prs):
-    return [{'repo': p.get('repository',{}).get('nameWithOwner',''), 'title': p.get('title',''),
-             'state': p.get('state',''), 'url': p.get('url',''),
-             'author': p.get('author',{}).get('login',''),
-             'createdAt': p.get('createdAt',''), 'closedAt': p.get('closedAt',''),
+    return [{'repo': p.get('repository', {}).get('nameWithOwner', ''),
+             'title': p.get('title', ''),
+             'state': p.get('state', '').lower(),
+             'url': p.get('url', ''),
+             'author': (p.get('author') or {}).get('login', ''),
+             'createdAt': p.get('createdAt', ''),
+             'closedAt': p.get('closedAt', ''),
              'isDraft': p.get('isDraft', False)} for p in prs]
 
 def fmt_issues(iss):
-    return [{'repo': i.get('repository',{}).get('nameWithOwner',''), 'title': i.get('title',''),
-             'state': i.get('state',''), 'url': i.get('url','')} for i in iss]
+    return [{'repo': i.get('repository', {}).get('nameWithOwner', ''),
+             'title': i.get('title', ''),
+             'state': i.get('state', '').lower(),
+             'url': i.get('url', '')} for i in iss]
 
-result = {
+authored = data.get('authored', {}).get('nodes', [])
+reviewed = data.get('reviewed', {}).get('nodes', [])
+issues = data.get('issues', {}).get('nodes', [])
+
+print(json.dumps({
     'authored': fmt_prs(authored),
     'reviewed': fmt_prs(reviewed),
     'issues': fmt_issues(issues),
     'summary': {'authored': len(authored), 'reviewed': len(reviewed), 'issues': len(issues)},
-}
-print(json.dumps(result))
-"
+}))
+PYEOF
 }
 
 # ── Help ───────────────────────────────────────────────────────────────────────
@@ -287,7 +403,7 @@ Commands:
   team-prs <roster-file>    GitHub activity for all roster members
   member-prs <handle>       Individual member's GitHub activity
 
-All output is JSON. Requires the `gh` CLI (authenticated).
+All output is JSON. Uses GraphQL for efficient batching. Requires the `gh` CLI (authenticated).
 EOF
 }
 

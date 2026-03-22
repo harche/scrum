@@ -26,5 +26,6 @@ PYEOF
 cmd_sprint_issues() {
   local sprint_id="$1"
   local limit="${2:-100}"
-  _curl "${JIRA_BASE}/rest/agile/1.0/sprint/${sprint_id}/issue?maxResults=${limit}&fields=${ISSUE_FIELDS}"
+  local fields="${3:-$ISSUE_FIELDS}"
+  _curl "${JIRA_BASE}/rest/agile/1.0/sprint/${sprint_id}/issue?maxResults=${limit}&fields=${fields}"
 }

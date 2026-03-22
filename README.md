@@ -73,31 +73,32 @@ The options you see are always driven by the current state — if a Jira transit
 ```
 bin/
   jira.sh                    Thin dispatcher — sources modular libraries
-  gh-activity.sh             GitHub activity composite commands
+  gh-activity.sh             GitHub activity (GraphQL batching)
   gh-discussion.sh           GitHub Discussions publish/comment
   lib/
     core.sh                  Auth, HTTP, constants, logging
     team.sh                  Team config resolution (sprint filter, roster, components)
     api/
-      issue.sh               cmd_search, cmd_get
-      sprint.sh              cmd_sprints, cmd_sprint_issues
+      issue.sh               cmd_search, cmd_get (with optional field limiting)
+      sprint.sh              cmd_sprints, cmd_sprint_issues (with optional field limiting)
       comment.sh             cmd_comments, cmd_comment
       transition.sh          cmd_transitions, cmd_transition, cmd_close
       fields.sh              cmd_set_points, cmd_move_to_sprint
+      health.sh              cmd_health_check (field metadata validation)
     composite/
       sprint-dashboard.sh    Sprint info + issues by status + workload + blockers
       standup-data.sh        Dashboard + updates + bugs + comments + activity
-      bug-overview.sh        Untriaged + unassigned + blockers + escalations
+      bug-overview.sh        All open bugs → categorized in Python (3 queries)
       carryover-report.sh    Not-done items with carryover context
       planning-data.sh       Carryovers + scheduled + backlog + bugs
       issue-deep-dive.sh     Full issue + comments (ADF→text) + transitions
-      release-data.sh        Blockers + open bugs + epics for a version
+      release-data.sh        All bugs → blockers categorized in Python (2 queries)
       team-activity.sh       Per-member sprint items + comment counts
       my-board-data.sh       Sprint items filtered to current user
       my-bugs-data.sh        User's bugs with categories
       my-standup-data.sh     Standup data filtered to current user
-      epic-progress.sh       Epics with children progress
-      pickup-data.sh         Unassigned sprint items + bugs + escalations
+      epic-progress.sh       Bulk epic + children fetch (2 queries)
+      pickup-data.sh         Unassigned sprint items + bugs (2 queries)
     util/
       adf.py                 ADF-to-text converter (standalone)
       parallel.sh            Background job management + streaming
@@ -119,6 +120,16 @@ tests/
 
 Every slash command calls exactly one composite script (or two in parallel for Jira+GitHub commands). The composites handle all API parallelization, data grouping, ADF conversion, and filtering. Claude renders the JSON output directly — zero post-processing.
 
+## API Efficiency
+
+Both Jira and GitHub calls are optimized to minimize API usage:
+
+**GitHub** — `gh-activity.sh` uses GraphQL batching. Each command makes a single GraphQL call (instead of 2-3 REST calls). `team-prs` batches members in groups of 6, reducing a 16-member team from 48 REST calls to 3 GraphQL calls. Uses the 5,000 points/hr GraphQL budget instead of the tight 30/min search rate limit.
+
+**Jira** — Composite commands fetch broader datasets and categorize in Python rather than making narrow parallel queries. `bug-overview` went from 7 queries to 3; `epic-progress` from 2N to 2; `release-data` from 4 to 2. API functions accept optional `fields` parameters to limit payload size.
+
+**Health monitoring** — `bin/jira.sh health-check` validates all custom field IDs against Jira metadata. Composite commands include shape assertions and canary warnings on stderr to detect field format drift at runtime.
+
 ## Tests
 
 ```bash
@@ -129,4 +140,9 @@ bats tests/test-*.bats
 bats tests/test-composite.bats
 ```
 
-91 tests covering: core utilities, API commands, ADF conversion, team config, parallel execution, and all 13 Jira composite commands.
+92 tests covering: core utilities, API commands, ADF conversion, team config, parallel execution, and all 13 Jira composite commands.
+
+```bash
+# Validate Jira field mappings haven't drifted
+bin/jira.sh health-check
+```
