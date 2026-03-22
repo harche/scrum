@@ -1,4 +1,13 @@
-# Scrum Master Workspace
+# Scrum Master GoGo
+
+<p align="center">
+  <img src="assets/gogo1.jpg" width="45%" />
+  <img src="assets/gogo2.jpg" width="45%" />
+</p>
+
+<p align="center"><i>"Scrum Master GoGo naam hai mera... carryovers nikal ke gotiyaan khelta hoon main!"</i></p>
+
+---
 
 Claude Code slash commands for managing sprints, standups, and daily work on the OpenShift Node team.
 
