@@ -19,6 +19,24 @@ _date_days_ago() {
   date -v-${days}d +%Y-%m-%d 2>/dev/null || date -d "${days} days ago" +%Y-%m-%d 2>/dev/null
 }
 
+_sprint_since() {
+  # Default: earliest active sprint start date. Falls back to 7 days ago.
+  local result
+  result=$("$SCRIPT_DIR/jira.sh" sprints active 2>/dev/null | python3 -c "
+import sys, json
+try:
+    sprints = json.load(sys.stdin).get('values', [])
+    dates = [s['startDate'][:10] for s in sprints if s.get('startDate')]
+    if dates: print(min(dates))
+except Exception: pass
+" 2>/dev/null) || true
+  if [[ -n "$result" ]]; then
+    echo "$result"
+  else
+    _date_days_ago 7
+  fi
+}
+
 # ── my-prs <github-handle> ────────────────────────────────────────────────────
 # Authored PRs, review requests for me, recently merged
 # 1 GraphQL call (was 3 REST)
@@ -40,12 +58,15 @@ PR = """... on PullRequest {
 
 query = """{
   authoredOpen: search(query: "author:%s is:pr is:open sort:updated", type: ISSUE, first: 30) {
+    issueCount
     nodes { %s }
   }
   authoredMerged: search(query: "author:%s is:pr is:merged merged:>=%s sort:updated", type: ISSUE, first: 10) {
+    issueCount
     nodes { %s }
   }
   reviewRequested: search(query: "review-requested:%s is:pr is:open sort:updated", type: ISSUE, first: 20) {
+    issueCount
     nodes { %s }
   }
 }""" % (handle, PR, handle, since, PR, handle, PR)
@@ -71,15 +92,20 @@ def fmt(nodes):
              'closedAt': p.get('closedAt', ''),
              'isDraft': p.get('isDraft', False)} for p in nodes]
 
-ao = data.get('authoredOpen', {}).get('nodes', [])
-am = data.get('authoredMerged', {}).get('nodes', [])
-rr = data.get('reviewRequested', {}).get('nodes', [])
+ao_data = data.get('authoredOpen', {})
+am_data = data.get('authoredMerged', {})
+rr_data = data.get('reviewRequested', {})
+ao = ao_data.get('nodes', [])
+am = am_data.get('nodes', [])
+rr = rr_data.get('nodes', [])
 
 print(json.dumps({
     'authoredOpen': fmt(ao),
     'authoredMerged': fmt(am),
     'reviewRequested': fmt(rr),
-    'summary': {'openPRs': len(ao), 'recentlyMerged': len(am), 'reviewRequests': len(rr)},
+    'summary': {'openPRs': ao_data.get('issueCount', len(ao)),
+                'recentlyMerged': am_data.get('issueCount', len(am)),
+                'reviewRequests': rr_data.get('issueCount', len(rr))},
 }))
 PYEOF
 }
@@ -106,12 +132,15 @@ ISS = """... on Issue {
 
 query = """{
   authored: search(query: "author:%s is:issue is:open sort:updated", type: ISSUE, first: 20) {
+    issueCount
     nodes { %s }
   }
   assigned: search(query: "assignee:%s is:issue is:open sort:updated", type: ISSUE, first: 20) {
+    issueCount
     nodes { %s }
   }
   commented: search(query: "commenter:%s is:issue is:open updated:>=%s sort:updated", type: ISSUE, first: 20) {
+    issueCount
     nodes { %s }
   }
 }""" % (handle, ISS, handle, ISS, handle, since, ISS)
@@ -137,15 +166,20 @@ def fmt(issues):
              'labels': [l.get('name', '') for l in i.get('labels', {}).get('nodes', [])]}
             for i in issues]
 
-authored = data.get('authored', {}).get('nodes', [])
-assigned = data.get('assigned', {}).get('nodes', [])
-commented = data.get('commented', {}).get('nodes', [])
+authored_data = data.get('authored', {})
+assigned_data = data.get('assigned', {})
+commented_data = data.get('commented', {})
+authored = authored_data.get('nodes', [])
+assigned = assigned_data.get('nodes', [])
+commented = commented_data.get('nodes', [])
 
 print(json.dumps({
     'authored': fmt(authored),
     'assigned': fmt(assigned),
     'commented': fmt(commented),
-    'summary': {'authored': len(authored), 'assigned': len(assigned), 'commented': len(commented)},
+    'summary': {'authored': authored_data.get('issueCount', len(authored)),
+                'assigned': assigned_data.get('issueCount', len(assigned)),
+                'commented': commented_data.get('issueCount', len(commented))},
 }))
 PYEOF
 }
@@ -170,9 +204,11 @@ PR = """... on PullRequest {
 
 query = """{
   reviewRequested: search(query: "review-requested:%s is:pr is:open sort:created", type: ISSUE, first: 30) {
+    issueCount
     nodes { %s }
   }
   mentioned: search(query: "mentions:%s is:pr is:open sort:updated", type: ISSUE, first: 10) {
+    issueCount
     nodes { %s }
   }
 }""" % (handle, PR, handle, PR)
@@ -209,13 +245,16 @@ def fmt(prs):
         })
     return sorted(result, key=lambda x: -x['ageDays'])
 
-requested = data.get('reviewRequested', {}).get('nodes', [])
-mentions = data.get('mentioned', {}).get('nodes', [])
+requested_data = data.get('reviewRequested', {})
+mentions_data = data.get('mentioned', {})
+requested = requested_data.get('nodes', [])
+mentions = mentions_data.get('nodes', [])
 
 print(json.dumps({
     'reviewRequested': fmt(requested),
     'mentioned': fmt(mentions),
-    'summary': {'reviewRequested': len(requested), 'mentioned': len(mentions)},
+    'summary': {'reviewRequested': requested_data.get('issueCount', len(requested)),
+                'mentioned': mentions_data.get('issueCount', len(mentions))},
 }))
 PYEOF
 }
@@ -231,8 +270,8 @@ cmd_team_prs() {
     return 1
   fi
 
-  local since
-  since=$(_date_days_ago 7)
+  local since="${2:-}"
+  [[ -z "$since" ]] && since=$(_sprint_since)
 
   python3 - "$roster_file" "$since" <<'PYEOF'
 import json, subprocess, sys
@@ -261,13 +300,16 @@ def build_batch_query(batch, since):
     for idx, (name, handle) in enumerate(batch):
         alias = f'm{idx}'
         parts.append(f"""
-  {alias}_authored: search(query: "author:{handle} is:pr updated:>={since} sort:updated", type: ISSUE, first: 10) {{
+  {alias}_authored: search(query: "author:{handle} is:pr created:>={since} sort:updated", type: ISSUE, first: 10) {{
+    issueCount
     nodes {{ {PR} }}
   }}
   {alias}_reviewed: search(query: "reviewed-by:{handle} is:pr updated:>={since} sort:updated", type: ISSUE, first: 10) {{
+    issueCount
     nodes {{ {PR} }}
   }}
   {alias}_commented: search(query: "commenter:{handle} is:pr updated:>={since} sort:updated", type: ISSUE, first: 5) {{
+    issueCount
     nodes {{ {PR} }}
   }}""")
     return '{' + ''.join(parts) + '\n}'
@@ -295,15 +337,16 @@ for batch_idx, batch in enumerate(batches):
     data = results[batch_idx]
     for idx, (name, handle) in enumerate(batch):
         alias = f'm{idx}'
-        authored = data.get(f'{alias}_authored', {}).get('nodes', [])
-        reviewed = data.get(f'{alias}_reviewed', {}).get('nodes', [])
-        commented = data.get(f'{alias}_commented', {}).get('nodes', [])
+        authored_data = data.get(f'{alias}_authored', {})
+        reviewed_data = data.get(f'{alias}_reviewed', {})
+        commented_data = data.get(f'{alias}_commented', {})
+        authored = authored_data.get('nodes', [])
         all_members.append({
             'name': name,
             'github': handle,
-            'authored': len(authored),
-            'reviewed': len(reviewed),
-            'commented': len(commented),
+            'authored': authored_data.get('issueCount', len(authored)),
+            'reviewed': reviewed_data.get('issueCount', len(reviewed_data.get('nodes', []))),
+            'commented': commented_data.get('issueCount', len(commented_data.get('nodes', []))),
             'prs': [{'repo': p.get('repository', {}).get('nameWithOwner', ''),
                      'title': p.get('title', ''),
                      'state': p.get('state', '').lower(),
@@ -320,8 +363,8 @@ PYEOF
 # 1 GraphQL call (was 3 REST)
 cmd_member_prs() {
   local handle="${1:?GitHub handle required}"
-  local since
-  since=$(_date_days_ago 7)
+  local since="${2:-}"
+  [[ -z "$since" ]] && since=$(_sprint_since)
 
   python3 - "$handle" "$since" <<'PYEOF'
 import json, subprocess, sys
@@ -340,13 +383,16 @@ ISS = """... on Issue {
 }"""
 
 query = """{
-  authored: search(query: "author:%s is:pr updated:>=%s sort:updated", type: ISSUE, first: 20) {
+  authored: search(query: "author:%s is:pr created:>=%s sort:updated", type: ISSUE, first: 20) {
+    issueCount
     nodes { %s }
   }
   reviewed: search(query: "reviewed-by:%s is:pr updated:>=%s sort:updated", type: ISSUE, first: 20) {
+    issueCount
     nodes { %s }
   }
   issues: search(query: "author:%s is:issue updated:>=%s sort:updated", type: ISSUE, first: 10) {
+    issueCount
     nodes { %s }
   }
 }""" % (handle, since, PR, handle, since, PR, handle, since, ISS)
@@ -377,15 +423,20 @@ def fmt_issues(iss):
              'state': i.get('state', '').lower(),
              'url': i.get('url', '')} for i in iss]
 
-authored = data.get('authored', {}).get('nodes', [])
-reviewed = data.get('reviewed', {}).get('nodes', [])
-issues = data.get('issues', {}).get('nodes', [])
+authored_data = data.get('authored', {})
+reviewed_data = data.get('reviewed', {})
+issues_data = data.get('issues', {})
+authored = authored_data.get('nodes', [])
+reviewed = reviewed_data.get('nodes', [])
+issues = issues_data.get('nodes', [])
 
 print(json.dumps({
     'authored': fmt_prs(authored),
     'reviewed': fmt_prs(reviewed),
     'issues': fmt_issues(issues),
-    'summary': {'authored': len(authored), 'reviewed': len(reviewed), 'issues': len(issues)},
+    'summary': {'authored': authored_data.get('issueCount', len(authored)),
+                'reviewed': reviewed_data.get('issueCount', len(reviewed)),
+                'issues': issues_data.get('issueCount', len(issues))},
 }))
 PYEOF
 }
@@ -400,8 +451,8 @@ Commands:
   my-prs <handle>           My open PRs + review requests + recently merged
   my-issues <handle>        My GitHub issues (authored, assigned, commented)
   review-queue <handle>     PRs awaiting my review, prioritized by age
-  team-prs <roster-file>    GitHub activity for all roster members
-  member-prs <handle>       Individual member's GitHub activity
+  team-prs <roster-file> [since]   GitHub activity for all roster members (default: sprint start)
+  member-prs <handle> [since]     Individual member's activity (default: sprint start)
 
 All output is JSON. Uses GraphQL for efficient batching. Requires the `gh` CLI (authenticated).
 EOF
@@ -413,8 +464,8 @@ case "${1:-help}" in
   my-prs)        cmd_my_prs "${2:?GitHub handle required}" ;;
   my-issues)     cmd_my_issues "${2:?GitHub handle required}" ;;
   review-queue)  cmd_review_queue "${2:?GitHub handle required}" ;;
-  team-prs)      cmd_team_prs "${2:?Roster file required}" ;;
-  member-prs)    cmd_member_prs "${2:?GitHub handle required}" ;;
+  team-prs)      cmd_team_prs "${2:?Roster file required}" "${3:-}" ;;
+  member-prs)    cmd_member_prs "${2:?GitHub handle required}" "${3:-}" ;;
   help|--help|-h) cmd_help ;;
   *)             echo "Unknown command: $1" >&2; cmd_help >&2; exit 1 ;;
 esac

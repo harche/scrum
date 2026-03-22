@@ -120,8 +120,8 @@ bin/jira.sh health-check
 bin/gh-activity.sh my-prs <handle>         # My PRs + review requests (serves /my-prs)
 bin/gh-activity.sh my-issues <handle>      # My GitHub issues (serves /my-github-issues)
 bin/gh-activity.sh review-queue <handle>   # PRs awaiting my review (serves /review-queue)
-bin/gh-activity.sh team-prs <roster-file>  # All members' activity (serves /standup-github)
-bin/gh-activity.sh member-prs <handle>     # One member's activity (serves /team-member-github)
+bin/gh-activity.sh team-prs <roster-file> [since]  # All members' activity (serves /standup-github)
+bin/gh-activity.sh member-prs <handle> [since]     # One member's activity (serves /team-member-github)
 ```
 
 ### Architecture
