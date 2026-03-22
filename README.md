@@ -77,6 +77,16 @@ Each command follows a **show → select → act → loop** pattern:
 
 The options you see are always driven by the current state — if a Jira transition isn't available, it won't appear. If a PR is approved with passing checks, "Merge" is offered. No stale menus.
 
+## API Efficiency
+
+Both Jira and GitHub calls are optimized to minimize API usage:
+
+**GitHub** — `gh-activity.sh` uses GraphQL batching. Each command makes a single GraphQL call (instead of 2-3 REST calls). `team-prs` batches members in groups of 6, reducing a 16-member team from 48 REST calls to 3 GraphQL calls. Uses the 5,000 points/hr GraphQL budget instead of the tight 30/min search rate limit.
+
+**Jira** — Composite commands fetch broader datasets and categorize in Python rather than making narrow parallel queries. `bug-overview` went from 7 queries to 3; `epic-progress` from 2N to 2; `release-data` from 4 to 2. API functions accept optional `fields` parameters to limit payload size.
+
+**Health monitoring** — `bin/jira.sh health-check` validates all custom field IDs against Jira metadata. Composite commands include shape assertions and canary warnings on stderr to detect field format drift at runtime.
+
 ## Architecture
 
 ```
@@ -128,16 +138,6 @@ tests/
 ```
 
 Every slash command calls exactly one composite script (or two in parallel for Jira+GitHub commands). The composites handle all API parallelization, data grouping, ADF conversion, and filtering. Claude renders the JSON output directly — zero post-processing.
-
-## API Efficiency
-
-Both Jira and GitHub calls are optimized to minimize API usage:
-
-**GitHub** — `gh-activity.sh` uses GraphQL batching. Each command makes a single GraphQL call (instead of 2-3 REST calls). `team-prs` batches members in groups of 6, reducing a 16-member team from 48 REST calls to 3 GraphQL calls. Uses the 5,000 points/hr GraphQL budget instead of the tight 30/min search rate limit.
-
-**Jira** — Composite commands fetch broader datasets and categorize in Python rather than making narrow parallel queries. `bug-overview` went from 7 queries to 3; `epic-progress` from 2N to 2; `release-data` from 4 to 2. API functions accept optional `fields` parameters to limit payload size.
-
-**Health monitoring** — `bin/jira.sh health-check` validates all custom field IDs against Jira metadata. Composite commands include shape assertions and canary warnings on stderr to detect field format drift at runtime.
 
 ## Tests
 
