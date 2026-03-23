@@ -7,7 +7,7 @@ Takes an optional argument: the next sprint number. If not provided, discover th
 1. **Team Selection:** Use `AskUserQuestion` to ask which team (see "Team Selection" in CLAUDE.md). Use the selected team name for the composite command.
 
 2. **Fetch all planning data in one call:**
-   `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh planning-data "<team>"`
+   `bin/jira.sh planning-data "<team>"`
 
    This returns: `activeSprint`, `futureSprint` (or null), `wrapUp` (done + carryovers with counts and points), `scheduled` (items already in next sprint), `backlogCandidates`, `unscheduledBugs`, `roster`.
 
@@ -36,7 +36,7 @@ From `roster`: List every roster member and their current carryover load (count 
 Go through each section interactively. For each item, resolve available actions from the API:
 
 1. **Carryovers**: For each not-done item:
-   - Fetch transitions: `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh transitions <KEY>`
+   - Fetch transitions: `bin/jira.sh transitions <KEY>`
    - Check state: has points? blocked? assignee?
    - Use `AskUserQuestion` with dynamic options:
      - "Move to next sprint (keep)"
@@ -50,7 +50,7 @@ Go through each section interactively. For each item, resolve available actions 
    - Execute with confirmation. After action, re-fetch and offer follow-up actions.
 
 2. **Backlog candidates**: For each candidate:
-   - Fetch transitions: `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh transitions <KEY>`
+   - Fetch transitions: `bin/jira.sh transitions <KEY>`
    - Check state: has points? has assignee?
    - Use `AskUserQuestion` with dynamic options:
      - "Pull into next sprint" (move-to-sprint)
@@ -61,7 +61,7 @@ Go through each section interactively. For each item, resolve available actions 
      - "Skip"
 
 3. **Open bugs**: For each unscheduled bug:
-   - Fetch transitions: `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh transitions <KEY>`
+   - Fetch transitions: `bin/jira.sh transitions <KEY>`
    - Check state: has assignee? has priority? is release blocker?
    - Use `AskUserQuestion` with dynamic options:
      - "Add to next sprint"

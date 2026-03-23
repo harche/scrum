@@ -5,7 +5,7 @@ Show my personal sprint board — all issues assigned to me in the current sprin
 1. **Team Selection:** Use `AskUserQuestion` to ask which team (see "Team Selection" in CLAUDE.md).
 
 2. **Fetch my board data:**
-   `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh my-board-data "<team>"`
+   `bin/jira.sh my-board-data "<team>"`
 
    Returns pre-filtered JSON: `sprint` (name, dates, daysRemaining), `summary` (total, done, inProgress, toDo, totalPoints, donePoints), `byStatus` (my items grouped by status), `flags` (blocked, no points, at-risk items).
 
@@ -37,6 +37,6 @@ Always include clickable Jira URLs.
 Use `AskUserQuestion`: "Which item would you like to act on?" with item numbers + "Done".
 
 When user picks an item:
-1. Fetch transitions: `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh transitions <KEY>`
+1. Fetch transitions: `bin/jira.sh transitions <KEY>`
 2. Build dynamic options from transitions + state (points, blocked, assignee)
 3. Execute with confirmation. Action loop until done.

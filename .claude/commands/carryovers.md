@@ -5,7 +5,7 @@ Analyze carryover items from the current sprint.
 1. **Team Selection:** Use `AskUserQuestion` to ask which team (see "Team Selection" in CLAUDE.md). Use the selected team name for the composite command.
 
 2. **Fetch all carryover data in one call:**
-   `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh carryover-report "<team>"`
+   `bin/jira.sh carryover-report "<team>"`
 
    This returns: `activeSprint`, `futureSprint` (or null), `carryovers` (not-done items with `previousSprints` count and `blocked` flag), `doneItems`, `stats` (totalItems, doneCount, carryoverCount, carryoverPoints, donePoints, byAssignee).
 
@@ -20,7 +20,7 @@ Table from `carryovers`: key, type, summary, status, assignee, story points, blo
 ### Interactive Review (Dynamic)
 Present carryovers one at a time (or in small groups by assignee). For each carryover:
 - Show: key, summary, status, assignee, story points, why it's carrying over (infer from status)
-- **Fetch available transitions:** `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh transitions <KEY>`
+- **Fetch available transitions:** `bin/jira.sh transitions <KEY>`
 - **Check current state:**
   - Has story points? → offer "Re-estimate story points" : "Set story points"
   - Is blocked (customfield_10517)? → offer "Unflag blocker" : "Flag as blocked"

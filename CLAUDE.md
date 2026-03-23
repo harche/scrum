@@ -42,6 +42,12 @@ bin/jira.sh move-to-sprint <sprintId> <ISSUE-KEY> [<ISSUE-KEY>...]
 # Set story points on an issue
 bin/jira.sh set-points <ISSUE-KEY> <points>
 
+# Set any field (value can be string, number, or JSON for arrays/objects)
+bin/jira.sh set-field <ISSUE-KEY> <fieldId> <value>
+
+# Add a remote link (e.g., GitHub PR/issue) to a Jira issue
+bin/jira.sh link <ISSUE-KEY> <URL> [title]
+
 # Get available transitions for an issue
 bin/jira.sh transitions <ISSUE-KEY>
 

@@ -43,9 +43,13 @@ Low-level API commands:
   comment <body> <KEY...>           Add a comment to one or more issues
   move-to-sprint <sprintId> <KEY...> Move issue(s) to a sprint
   set-points <ISSUE-KEY> <points>   Set story points on an issue
+  set-field <KEY> <fieldId> <value>  Set any field (value: string, number, or JSON)
+  link <KEY> <URL> [title]           Add a remote link (e.g., GitHub PR/issue)
   transitions <ISSUE-KEY>           Get available transitions
   transition <id> <KEY...>          Perform a transition on one or more issues
   close [comment] <KEY...>          Comment (optional) + close one or more issues
+  start-sprint <sprintId>           Start a sprint (set state to active)
+  close-sprint <sprintId>           Close a sprint (set state to closed)
   health-check                      Validate custom field IDs against Jira metadata
 
 High-level composite commands:
@@ -79,9 +83,13 @@ case "${1:-help}" in
   comment)        cmd_comment "${2:?Comment body required}" "${@:3}" ;;
   move-to-sprint) cmd_move_to_sprint "${2:?Sprint ID required}" "${@:3}" ;;
   set-points)     cmd_set_points "${2:?ISSUE-KEY required}" "${3:?Story points required}" ;;
+  set-field)      cmd_set_field "${2:?ISSUE-KEY required}" "${3:?Field ID required}" "${4:?Value required}" ;;
+  link)           cmd_link "${2:?ISSUE-KEY required}" "${3:?URL required}" "${4:-}" ;;
   transitions)    cmd_transitions "${2:?ISSUE-KEY required}" ;;
   transition)     cmd_transition "${2:?Transition ID required}" "${@:3}" ;;
   close)          cmd_close "${@:2}" ;;
+  start-sprint)   cmd_start_sprint "${2:?Sprint ID required}" ;;
+  close-sprint)   cmd_close_sprint "${2:?Sprint ID required}" ;;
   health-check)   cmd_health_check ;;
 
   # High-level composite commands

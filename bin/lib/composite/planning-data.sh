@@ -11,9 +11,9 @@ cmd_planning_data() {
 
   team_config "$team"
 
-  # ── Sprint discovery ─────────────────────────────────────────────────────
+  # ── Sprint discovery (active preferred, fall back to last closed) ────────
   local active_sprint future_sprint
-  active_sprint=$(team_sprint "$team" active) || { echo "$active_sprint" >&2; return 1; }
+  active_sprint=$(team_sprint_fallback "$team") || { echo "$active_sprint" >&2; return 1; }
 
   local active_id
   active_id=$(echo "$active_sprint" | python3 -c "import json,sys; print(json.load(sys.stdin)['id'])")

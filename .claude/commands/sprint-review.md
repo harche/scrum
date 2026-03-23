@@ -5,7 +5,7 @@ Prepare a sprint review summary for the current (or just-completed) sprint.
 1. **Team Selection:** Use `AskUserQuestion` to ask which team (see "Team Selection" in CLAUDE.md). Use the selected team name for the composite command.
 
 2. **Fetch all sprint data in one call:**
-   `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh sprint-dashboard "<team>"`
+   `bin/jira.sh sprint-dashboard "<team>"`
 
    This returns: `sprint` (name, dates, daysElapsed, daysTotal), `summary` (done/total counts, donePoints/totalPoints), `byStatus` (issues grouped — use "done" group for completed, everything else for incomplete).
 
@@ -48,7 +48,7 @@ After presenting the summary, use `AskUserQuestion`: "What would you like to do?
 
 **If user picks "Act on a carryover item":**
 Show the carryover table and ask which item. For the selected item:
-1. Fetch transitions: `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh transitions <KEY>`
+1. Fetch transitions: `bin/jira.sh transitions <KEY>`
 2. Check state: has points? blocked? assignee?
 3. Build dynamic options:
    - List available transitions by name (e.g., "Move to next sprint", "Close")

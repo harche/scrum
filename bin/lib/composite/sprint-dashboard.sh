@@ -14,10 +14,13 @@ cmd_sprint_dashboard() {
   # ── Resolve team config ──────────────────────────────────────────────────
   team_config "$team"
 
-  # ── Get sprint info ──────────────────────────────────────────────────────
+  # ── Get sprint info (active preferred, fall back to future) ──────────────
   local sprint_json
-  sprint_json=$(team_sprint "$team" active) || {
-    echo "$sprint_json" >&2; return 1
+  sprint_json=$(team_sprint "$team" active 2>/dev/null) || {
+    sprint_json=$(team_sprint "$team" future 2>/dev/null) || {
+      echo '{"error":"No active or future sprint found for '"$team"'"}' >&2; return 1
+    }
+    _log "WARN" "No active sprint — using future sprint"
   }
 
   local sprint_id

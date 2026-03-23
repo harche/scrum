@@ -5,7 +5,7 @@ Prepare a summary for the weekly standup/grooming meeting.
 1. **Team Selection:** Use `AskUserQuestion` to ask which team (see "Team Selection" in CLAUDE.md). Use the selected team name for the composite command.
 
 2. **Fetch all standup data in one call:**
-   `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh standup-data "<team>"`
+   `bin/jira.sh standup-data "<team>"`
 
    This returns a single JSON blob with: `sprint` (id, name, dates, progress), `summary` (counts, points), `byStatus` (issues grouped), `blockers`, `atRisk`, `newBugs`, `discussionTopics`, `memberActivity` (per roster member: sprintItems, commentCount7d, statusSummary), `teamWorkload`.
 
@@ -21,7 +21,7 @@ Prepare a summary for the weekly standup/grooming meeting.
    - "Done (no actions needed)"
 
    **If user picks an item**, resolve available actions from the API:
-   a. Fetch transitions: `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh transitions <KEY>`
+   a. Fetch transitions: `bin/jira.sh transitions <KEY>`
    b. Check state: has points? blocked? assignee?
    c. Build dynamic options:
       - List available transitions by name (from the transitions API)

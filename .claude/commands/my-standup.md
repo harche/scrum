@@ -5,7 +5,7 @@ Generate my personal standup talking points — what I did, what I'm doing, and 
 Run these in parallel:
 
 1. **Jira data:**
-   `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh my-standup-data "<team>"`
+   `bin/jira.sh my-standup-data "<team>"`
 
    Returns pre-filtered to my items: `sprint` (name, daysElapsed, daysTotal), `done[]`, `inProgress[]`, `blocked[]` (with blockedReason), `upNext[]`, `recentComments[]` (plain text), `summary` (counts).
 
@@ -51,7 +51,7 @@ Use `AskUserQuestion` with options based on data:
 - "Act on a Jira item" / "Act on a GitHub PR" / "Done"
 
 When user picks a Jira item:
-1. Fetch transitions: `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh transitions <KEY>`
+1. Fetch transitions: `bin/jira.sh transitions <KEY>`
 2. Build dynamic options, execute with confirmation, action loop.
 
 When user picks a GitHub PR:

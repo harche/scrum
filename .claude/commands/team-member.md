@@ -11,7 +11,7 @@ Look up the GitHub handle by matching the name argument (case-insensitive partia
 1. **Determine which team** the person belongs to by checking both roster files.
 
 2. **Fetch standup data:**
-   `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh standup-data "<team>"`
+   `bin/jira.sh standup-data "<team>"`
 
    Returns: `sprint`, `byStatus` (all issues grouped), `memberActivity[]` (per member with sprintItems, commentCount7d, statusSummary).
 

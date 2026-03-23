@@ -5,7 +5,7 @@ Show progress on epics I'm contributing to in the current sprint.
 1. **Team Selection:** Use `AskUserQuestion` to ask which team (see "Team Selection" in CLAUDE.md).
 
 2. **Fetch epic progress data:**
-   `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh epic-progress "<team>"`
+   `bin/jira.sh epic-progress "<team>"`
 
    Returns: `sprint` (id, name), `epics[]` (each with key, summary, status, assignee, `progress` {total, done, inProgress, toDo, percent}, `myItems[]`, `otherItems[]`, `allChildren[]`), `summary` (totalEpics, nearComplete[], atRisk[]).
 
@@ -42,6 +42,6 @@ Always include clickable Jira URLs.
 Use `AskUserQuestion`: "Which epic or item to act on?" with numbers + "Done".
 
 When user picks an item:
-1. Fetch transitions: `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh transitions <KEY>`
+1. Fetch transitions: `bin/jira.sh transitions <KEY>`
 2. Build dynamic options from transitions + state
 3. Execute with confirmation. Action loop until done.

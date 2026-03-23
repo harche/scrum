@@ -5,7 +5,7 @@ Find unassigned work to pick up from the sprint backlog or bug queue.
 1. **Team Selection:** Use `AskUserQuestion` to ask which team (see "Team Selection" in CLAUDE.md).
 
 2. **Fetch all available work:**
-   `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh pickup-data "<team>"`
+   `bin/jira.sh pickup-data "<team>"`
 
    Returns: `sprint` (id, name), `unassignedSprintItems[]`, `unassignedBugs[]`, `customerEscalations[]`, `summary` (sprintItems, bugs, escalations counts).
 
@@ -33,7 +33,7 @@ Use `AskUserQuestion`: "Pick up any bugs?" with numbers + "Skip".
 Use `AskUserQuestion`: "Pick up any escalations?" with numbers + "Skip".
 
 When user picks an item:
-1. Fetch transitions: `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh transitions <KEY>`
+1. Fetch transitions: `bin/jira.sh transitions <KEY>`
 2. Build dynamic options:
    - "Assign to me (Harshal Patil)"
    - "Assign to me + set story points" (if no points)

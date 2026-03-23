@@ -3,7 +3,7 @@ Run a bug triage session across all Node components.
 ## Steps
 
 1. **Fetch all bug data (no team selection needed):**
-   `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh bug-overview all`
+   `bin/jira.sh bug-overview all`
 
    This searches ALL Node components and both team rosters. Returns: `summary` (totalOpen, untriaged, unassigned, blockerProposals, customerEscalations, newThisWeek, missingComponent), and arrays: `untriaged`, `unassigned`, `blockerProposals`, `customerEscalations`, `newThisWeek`, `missingComponent`, `allOpen`.
 
@@ -60,7 +60,7 @@ After showing each category table, use `AskUserQuestion`: "Which bug would you l
 
 When the user picks a bug:
 
-a. **Fetch available transitions:** `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh transitions <KEY>`
+a. **Fetch available transitions:** `bin/jira.sh transitions <KEY>`
 b. **Check current state** from the bug data:
    - Has assignee? → offer "Reassign" : "Assign" (list roster members)
    - Is blocked? → offer "Unflag blocker" : "Flag as blocked"

@@ -5,12 +5,12 @@ Argument: $ARGUMENTS (the issue key, e.g., OCPNODE-4161 or OCPBUGS-65805)
 ## Steps
 
 1. **Fetch all issue data in one call:**
-   `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh issue-deep-dive $ARGUMENTS`
+   `bin/jira.sh issue-deep-dive $ARGUMENTS`
 
    This returns: `key`, `summary`, `description` (plain text, already converted from ADF), `status`, `statusCategory`, `assignee`, `assigneeEmail`, `priority`, `type`, `points`, `fixVersions`, `epicKey`, `releaseBlocker`, `blocked`, `blockedReason`, `sfdcCaseCount`, `sfdcLinks`, `linkedIssues[]`, `comments[]` (each with author, created, body as plain text), `transitions[]` (available transitions with id and name).
 
 2. If the issue has an Epic Link (`epicKey`), fetch the epic for broader context:
-   `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh get <epicKey>`
+   `bin/jira.sh get <epicKey>`
 
 ## Output
 
@@ -57,4 +57,4 @@ After presenting the investigation, use transitions from the already-fetched `tr
 
 3. **Execute the chosen action** (with confirmation via `AskUserQuestion` for any write operation).
 
-4. **Action loop:** After executing an action, re-fetch the issue via `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh issue-deep-dive $ARGUMENTS` and offer the next set of contextual actions. Continue until the user picks "Done".
+4. **Action loop:** After executing an action, re-fetch the issue via `bin/jira.sh issue-deep-dive $ARGUMENTS` and offer the next set of contextual actions. Continue until the user picks "Done".

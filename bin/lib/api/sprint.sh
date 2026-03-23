@@ -29,3 +29,13 @@ cmd_sprint_issues() {
   local fields="${3:-$ISSUE_FIELDS}"
   _curl "${JIRA_BASE}/rest/agile/1.0/sprint/${sprint_id}/issue?maxResults=${limit}&fields=${fields}"
 }
+
+cmd_start_sprint() {
+  local sprint_id="${1:?Sprint ID required}"
+  _curl -X POST -d '{"state":"active"}' "${JIRA_BASE}/rest/agile/1.0/sprint/${sprint_id}"
+}
+
+cmd_close_sprint() {
+  local sprint_id="${1:?Sprint ID required}"
+  _curl -X POST -d '{"state":"closed"}' "${JIRA_BASE}/rest/agile/1.0/sprint/${sprint_id}"
+}

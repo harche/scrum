@@ -5,7 +5,7 @@ Show the current sprint dashboard.
 1. **Team Selection:** Use `AskUserQuestion` to ask which team (see "Team Selection" in CLAUDE.md). Use the selected team name for the composite command.
 
 2. **Fetch all sprint data in one call:**
-   `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh sprint-dashboard "<team>"`
+   `bin/jira.sh sprint-dashboard "<team>"`
 
    This returns a single JSON blob with: `sprint` (id, name, dates, daysElapsed, daysTotal, daysRemaining), `summary` (counts by status, points), `byStatus` (issues grouped by status), `blockers`, `atRisk`, `teamWorkload`, `roster`.
 
@@ -40,7 +40,7 @@ After presenting the dashboard, use `AskUserQuestion` to ask: "Which item would 
 
 When the user picks an item, resolve that item's available actions from the API:
 
-1. **Fetch available transitions:** `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh transitions <SELECTED-KEY>`
+1. **Fetch available transitions:** `bin/jira.sh transitions <SELECTED-KEY>`
 2. **Check current state:**
    - Has story points? → offer "Update story points" : "Set story points"
    - Is blocked? → offer "Unflag blocker" : "Flag as blocked"

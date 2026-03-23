@@ -16,7 +16,12 @@ cmd_my_standup_data() {
   local user_email="$JIRA_USER"
 
   local sprint_json
-  sprint_json=$(team_sprint "$team" active) || { echo "$sprint_json" >&2; return 1; }
+  sprint_json=$(team_sprint "$team" active 2>/dev/null) || {
+    sprint_json=$(team_sprint "$team" future 2>/dev/null) || {
+      echo '{"error":"No active or future sprint found for '"$team"'"}' >&2; return 1
+    }
+    _log "WARN" "No active sprint — using future sprint"
+  }
 
   local sprint_id
   sprint_id=$(echo "$sprint_json" | python3 -c "import json,sys; print(json.load(sys.stdin)['id'])")

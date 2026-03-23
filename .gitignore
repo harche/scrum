@@ -1,2 +1,9 @@
 .playwright-cli/
 bin/lib/util/__pycache__/
+
+# Local config (contains personal email, sprint IDs, plugin settings)
+.claude/settings.local.json
+
+# Team rosters contain real names — create from *.example.json files in config/
+config/team-roster-dra.json
+config/team-roster-core.json

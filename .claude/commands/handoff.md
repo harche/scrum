@@ -9,7 +9,7 @@ Example: `/handoff OCPNODE-1234` or `/handoff OCPBUGS-65805`
 Run these in parallel:
 
 1. **Fetch issue data (Jira):**
-   `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh issue-deep-dive $ARGUMENTS`
+   `bin/jira.sh issue-deep-dive $ARGUMENTS`
 
    Returns: `key`, `summary`, `description` (plain text), `status`, `assignee`, `priority`, `type`, `points`, `fixVersions`, `epicKey`, `blocked`, `blockedReason`, `sfdcCaseCount`, `linkedIssues[]`, `comments[]` (plain text), `transitions[]`.
 

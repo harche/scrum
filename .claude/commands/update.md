@@ -7,7 +7,7 @@ Example: `/update OCPNODE-1234` or `/update OCPBUGS-65805`
 ## Steps
 
 1. **Fetch issue data:**
-   `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh issue-deep-dive $ARGUMENTS`
+   `bin/jira.sh issue-deep-dive $ARGUMENTS`
 
    Returns: `key`, `summary`, `status`, `assignee`, `points`, `blocked`, `blockedReason`, `transitions[]` (available transitions with id and name).
 

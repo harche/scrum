@@ -7,7 +7,7 @@ Example: `/blocker OCPNODE-1234` or `/blocker OCPBUGS-65805`
 ## Steps
 
 1. **Fetch issue data:**
-   `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh issue-deep-dive $ARGUMENTS`
+   `bin/jira.sh issue-deep-dive $ARGUMENTS`
 
    Returns: `key`, `summary`, `status`, `assignee`, `blocked` (boolean), `blockedReason` (plain text), `transitions[]`.
 

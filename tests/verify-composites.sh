@@ -12,7 +12,7 @@ cd "$SCRIPT_DIR"
 JIRA_API_TOKEN=$(security find-generic-password -s "JIRA_API_TOKEN" -w 2>/dev/null)
 JIRA_USER=$(security find-generic-password -s "JIRA_API_TOKEN" -g 2>&1 | grep "acct" | sed 's/.*="//;s/"//' 2>/dev/null) || true
 [[ -n "$JIRA_USER" && ! "$JIRA_USER" =~ "@" ]] && JIRA_USER="${JIRA_USER}@redhat.com"
-[[ -z "$JIRA_USER" ]] && JIRA_USER="${JIRA_EMAIL:-harpatil@redhat.com}"
+[[ -z "$JIRA_USER" ]] && JIRA_USER="${JIRA_EMAIL:-}"
 
 BASE="https://redhat.atlassian.net"
 export JIRA_EMAIL="$JIRA_USER"

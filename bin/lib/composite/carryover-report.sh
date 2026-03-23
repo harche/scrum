@@ -11,10 +11,10 @@ cmd_carryover_report() {
 
   team_config "$team"
 
-  # Get active and future sprint info + issues in parallel
+  # Get active (or last closed) and future sprint info in parallel
   parallel_init
-  parallel_run "active_sprint" team_sprint "$team" active
-  parallel_run "future_sprint" bash -c "source '${SCRIPT_DIR}/lib/core.sh'; source '${SCRIPT_DIR}/lib/api/sprint.sh'; source '${SCRIPT_DIR}/lib/team.sh'; team_sprint '$team' future 2>/dev/null || echo '{\"error\":\"No future sprint\"}'"
+  parallel_run "active_sprint" team_sprint_fallback "$team"
+  parallel_run "future_sprint" bash -c "source '${SCRIPT_DIR}/lib/core.sh'; source '${SCRIPT_DIR}/lib/api/sprint.sh'; source '${SCRIPT_DIR}/lib/team.sh'; result=\$(team_sprint '$team' future 2>/dev/null) && echo \"\$result\" || echo '{\"error\":\"No future sprint\"}'"
   parallel_wait_all || true
 
   local active_sprint future_sprint

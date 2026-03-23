@@ -9,7 +9,7 @@ Argument: $ARGUMENTS (optional OCP version, e.g., "4.22")
 1. **Team Selection:** Use `AskUserQuestion` to ask which team (see "Team Selection" in CLAUDE.md). Use the selected team name for the composite command.
 
 2. **Fetch all release data in one call:**
-   `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh release-data "<team>" $ARGUMENTS`
+   `bin/jira.sh release-data "<team>" $ARGUMENTS`
 
    This returns: `version`, `summary` (approvedBlockers, proposedBlockers, openBugs, epics counts), and arrays: `approvedBlockers`, `proposedBlockers`, `openBugs`, `epics`.
 
@@ -35,7 +35,7 @@ Table from `epics`: key, summary, status, assignee
 
 Present blockers and high-risk items interactively. For each item:
 
-1. **Fetch available transitions:** `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh transitions <KEY>`
+1. **Fetch available transitions:** `bin/jira.sh transitions <KEY>`
 2. **Check current state:**
    - Is blocked? → offer "Unflag blocker" : "Flag as blocked"
    - Has assignee? → offer "Reassign" : "Assign" (list roster members)

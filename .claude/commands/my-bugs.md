@@ -5,7 +5,7 @@ Show all bugs assigned to me, sorted by severity, age, and customer impact.
 1. **Team Selection:** Use `AskUserQuestion` to ask which team (see "Team Selection" in CLAUDE.md).
 
 2. **Fetch my bugs data:**
-   `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh my-bugs-data "<team>"`
+   `bin/jira.sh my-bugs-data "<team>"`
 
    Returns: `team`, `summary` (total, byPriority, customerEscalations, releaseBlockers), `customerEscalations[]`, `releaseBlockers[]`, `allBugs[]` (each with key, summary, status, priority, points, fixVersions, blocked, sfdcCaseCount, releaseBlocker).
 
@@ -34,6 +34,6 @@ Always include clickable Jira URLs.
 Use `AskUserQuestion`: "Which bug to act on?" with item numbers + "Done".
 
 When user picks a bug:
-1. Fetch transitions: `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh transitions <KEY>`
+1. Fetch transitions: `bin/jira.sh transitions <KEY>`
 2. Build dynamic options from transitions + state
 3. Execute with confirmation. Action loop until done.

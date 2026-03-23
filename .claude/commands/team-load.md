@@ -5,7 +5,7 @@ Show workload distribution across the team.
 1. **Team Selection:** Use `AskUserQuestion` to ask which team (see "Team Selection" in CLAUDE.md). Use the selected team name for the composite command.
 
 2. **Fetch all sprint data in one call:**
-   `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh sprint-dashboard "<team>"`
+   `bin/jira.sh sprint-dashboard "<team>"`
 
    This returns: `sprint`, `summary`, `byStatus`, `teamWorkload` (per-member breakdown: toDo, inProgress, codeReview, done, total, pointsDone, pointsTotal), `roster` (all roster members with hasItems flag).
 
@@ -38,7 +38,7 @@ After presenting workload, use `AskUserQuestion`: "What would you like to do?" w
 - "Done (no changes needed)"
 
 When the user drills into an item, resolve its available actions:
-1. Fetch transitions: `JIRA_EMAIL="harpatil@redhat.com" bin/jira.sh transitions <KEY>`
+1. Fetch transitions: `bin/jira.sh transitions <KEY>`
 2. Check state: has points? blocked? assignee?
 3. Build dynamic options: transitions, reassign, set points, flag blocker, add comment
 4. Execute with confirmation. Action loop until user returns.

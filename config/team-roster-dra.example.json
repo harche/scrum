@@ -1,0 +1,8 @@
+{
+  "description": "Maps Jira display names to GitHub handles for the DRA sub-team. Copy to team-roster-dra.json and fill in your team.",
+  "members": {
+    "Jane Doe": "janedoe",
+    "John Smith": "johnsmith",
+    "Alice Johnson": "alicej"
+  }
+}
