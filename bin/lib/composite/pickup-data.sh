@@ -55,8 +55,9 @@ def extract(data):
         })
     return items
 
-# Unassigned sprint items
-unassigned_sprint = [i for i in extract(issues_data) if i["assignee"] == "Unassigned"]
+# Unassigned sprint items (bot account is the default assignee — treat as unassigned)
+BOT_ACCOUNTS = {"Node Team Bot Account"}
+unassigned_sprint = [i for i in extract(issues_data) if i["assignee"] in ({"Unassigned"} | BOT_ACCOUNTS)]
 unassigned_bugs = extract(bugs_data)
 # Escalations are a subset of unassigned bugs (was a separate JQL query)
 escalations = [b for b in unassigned_bugs if b.get("sfdcCaseCount") is not None]

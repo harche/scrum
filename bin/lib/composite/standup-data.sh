@@ -158,11 +158,25 @@ for issue in issues:
     else:
         group = "other"
 
+    # Latest comment for this issue
+    latest_comment = None
+    issue_comments = all_comments.get(key, {}).get("comments", [])
+    if issue_comments:
+        last_c = issue_comments[-1]
+        body_adf = last_c.get("body", {})
+        body_text = adf_mod.adf_to_text(body_adf).strip() if isinstance(body_adf, dict) else str(body_adf)
+        latest_comment = {
+            "author": last_c.get("author", {}).get("displayName", "Unknown"),
+            "created": last_c.get("created", ""),
+            "body": body_text,
+        }
+
     item = {
         "key": key, "summary": summary, "status": status_name,
         "statusGroup": group, "assignee": assignee_name,
         "points": points, "type": issue_type, "priority": priority,
         "blocked": blocked_val == "True", "releaseBlocker": release_blocker,
+        "latestComment": latest_comment,
     }
     status_groups.setdefault(group, []).append(item)
 
@@ -174,8 +188,8 @@ for issue in issues:
     # Discussion topics
     if not points and group != "done":
         discussion_topics.append({"key": key, "summary": summary, "reason": "No story points"})
-    if assignee_name == "Unassigned" and group != "done":
-        discussion_topics.append({"key": key, "summary": summary, "reason": "Unassigned"})
+    if assignee_name in ("Unassigned", "Node Team Bot Account") and group != "done":
+        discussion_topics.append({"key": key, "summary": summary, "reason": "Unassigned (bot default)"})
 
     # Workload
     wl = team_workload.setdefault(assignee_name, {
@@ -259,7 +273,7 @@ for name in active_members - roster_names - {"Unassigned"}:
 
 by_status = {}
 for group in sorted(status_groups.keys(), key=lambda g: STATUS_ORDER.get(g, 99)):
-    by_status[group] = status_groups[group]
+    by_status[group] = sorted(status_groups[group], key=lambda i: i["assignee"])
 
 result = {
     "sprint": {

@@ -50,6 +50,7 @@ print(clauses)
     "$(parallel_get all_open)" \
     "$(parallel_get new_this_week)" \
     "$(parallel_get team_no_component)" \
+    "$roster_json" \
     <<'PYEOF'
 import json, sys
 
@@ -78,6 +79,21 @@ all_open = extract_bugs(sys.argv[1])
 new_this_week = extract_bugs(sys.argv[2])
 missing_component = extract_bugs(sys.argv[3])
 
+# Build roster name set for CVE filtering
+roster_names = {m["name"] for m in json.loads(sys.argv[4])}
+
+# Filter out CVE bugs that are ASSIGNED to non-roster members (handled by other teams)
+def is_external_cve(b):
+    return ("CVE" in b["summary"].upper()
+            and b["status"] == "ASSIGNED"
+            and b["assignee"] not in roster_names
+            and b["assignee"] != "Unassigned")
+
+excluded_cves = [b for b in all_open if is_external_cve(b)]
+all_open = [b for b in all_open if not is_external_cve(b)]
+new_this_week = [b for b in new_this_week if not is_external_cve(b)]
+missing_component = [b for b in missing_component if not is_external_cve(b)]
+
 # Shape assertions — warn if field formats have changed
 for b in all_open[:5]:  # spot-check first 5
     rb = b.get("releaseBlocker")
@@ -87,8 +103,10 @@ for b in all_open[:5]:  # spot-check first 5
         break
 
 # Categorize from all_open (was 4 separate JQL queries)
+# Bot account is the default assignee — treat as effectively unassigned
+BOT_ACCOUNTS = {"Node Team Bot Account"}
 untriaged = [b for b in all_open if b["priority"] in ("Undefined", "Unprioritized")]
-unassigned = [b for b in all_open if b["assignee"] == "Unassigned"]
+unassigned = [b for b in all_open if b["assignee"] in ({"Unassigned"} | BOT_ACCOUNTS)]
 blocker_proposals = [b for b in all_open
                      if isinstance(b.get("releaseBlocker"), dict)
                      and b["releaseBlocker"].get("value") == "Proposed"]
@@ -116,6 +134,7 @@ result = {
         "customerEscalations": len(escalations),
         "newThisWeek": len(new_this_week),
         "missingComponent": len(missing_component),
+        "excludedExternalCVEs": len(excluded_cves),
     },
     "untriaged": untriaged,
     "unassigned": unassigned,

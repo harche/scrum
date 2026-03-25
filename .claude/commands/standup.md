@@ -39,12 +39,13 @@ Prepare a summary for the weekly standup/grooming meeting.
 - Sprint name, days elapsed / total days, items done / total, points completed / total (from `sprint` and `summary`)
 
 ### Sprint Items
-Full table of all sprint issues from `byStatus`, grouped by status:
+Full table of all sprint issues from `byStatus`, grouped by status, sorted by assignee within each group:
 
-| # | Key | Summary | Status | Assignee | Pts |
-|---|-----|---------|--------|----------|-----|
+| # | Key | Summary | Status | Assignee | Pts | Latest Comment |
+|---|-----|---------|--------|----------|-----|----------------|
 
-Group order: Closed/Done first, then Code Review, then In Progress, then other statuses.
+- **Latest Comment:** From `latestComment` field — show as "_author (date): body_". Truncate body to ~80 chars if longer. Show "—" if no comment.
+- Group order: Closed/Done first, then Code Review, then In Progress, then other statuses.
 
 ### Blockers & Risks
 - Items from `blockers` array (Blocked field set)
