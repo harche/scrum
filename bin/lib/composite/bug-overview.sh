@@ -43,9 +43,6 @@ print(clauses)
   parallel_run "team_no_component" cmd_search \
     "project = OCPBUGS AND (${assignee_emails}) AND (component is EMPTY OR component not in (${ALL_NODE_COMPONENTS})) AND status not in (Closed, Done, Verified) ORDER BY priority ASC, created DESC" 50
 
-  # Customer escalations — bugs with Escalation label (case variants)
-  parallel_run "escalation_labeled" cmd_search \
-    "project = OCPBUGS AND ${comp_filter} AND labels in (\"escalation\", \"Escalation\", \"Escalation🔥\") AND status not in (Closed, Done, Verified) ORDER BY priority ASC" 50 '["key","summary"]'
 
   parallel_wait_all || true
 
@@ -55,7 +52,6 @@ print(clauses)
     "$(parallel_get new_this_week)" \
     "$(parallel_get team_no_component)" \
     "$roster_json" \
-    "$(parallel_get escalation_labeled)" \
     <<'PYEOF'
 import json, sys
 
@@ -86,9 +82,6 @@ missing_component = extract_bugs(sys.argv[3])
 # Build roster name set for CVE filtering
 roster_names = {m["name"] for m in json.loads(sys.argv[4])}
 
-# Build escalation key set from label-based query
-escalation_keys = {i["key"] for i in json.loads(sys.argv[5]).get("issues", [])}
-
 # Filter out CVE bugs that are ASSIGNED to non-roster members (handled by other teams)
 def is_external_cve(b):
     return ("CVE" in b["summary"].upper()
@@ -117,13 +110,10 @@ unassigned = [b for b in all_open if b["assignee"] in ({"Unassigned"} | BOT_ACCO
 blocker_proposals = [b for b in all_open
                      if isinstance(b.get("releaseBlocker"), dict)
                      and b["releaseBlocker"].get("value") == "Proposed"]
-escalations = [b for b in all_open if b["key"] in escalation_keys]
-
 # Canary: if we have bugs but nothing categorized, field formats may have changed
-if len(all_open) > 10 and (len(untriaged) + len(unassigned) + len(blocker_proposals) + len(escalations)) == 0:
+if len(all_open) > 10 and (len(untriaged) + len(unassigned) + len(blocker_proposals)) == 0:
     print(f"CANARY: {len(all_open)} open bugs but 0 categorized. "
-          f"Check releaseBlocker (customfield_10847), escalation labels, "
-          f"priority values.", file=sys.stderr)
+          f"Check releaseBlocker (customfield_10847), priority values.", file=sys.stderr)
 
 # Merge missing-component bugs into allOpen (deduplicated)
 all_open_keys = {b["key"] for b in all_open}
@@ -138,7 +128,6 @@ result = {
         "untriaged": len(untriaged),
         "unassigned": len(unassigned),
         "blockerProposals": len(blocker_proposals),
-        "customerEscalations": len(escalations),
         "newThisWeek": len(new_this_week),
         "missingComponent": len(missing_component),
         "excludedExternalCVEs": len(excluded_cves),
@@ -146,7 +135,6 @@ result = {
     "untriaged": untriaged,
     "unassigned": unassigned,
     "blockerProposals": blocker_proposals,
-    "customerEscalations": escalations,
     "newThisWeek": new_this_week,
     "missingComponent": missing_component,
     "allOpen": all_open,

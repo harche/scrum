@@ -195,7 +195,7 @@ assert 'relationship' in link
 @test "bug-overview: valid JSON with all categories" {
   run cmd_bug_overview "Node Devices"
   assert_valid_json "$output"
-  for key in summary untriaged unassigned blockerProposals customerEscalations newThisWeek missingComponent allOpen; do
+  for key in summary untriaged unassigned blockerProposals newThisWeek missingComponent allOpen; do
     assert_has_key "$output" "$key"
   done
 }
@@ -205,7 +205,7 @@ assert 'relationship' in link
   echo "$output" | python3 -c "
 import json, sys
 sm = json.load(sys.stdin)['summary']
-for f in ['totalOpen', 'untriaged', 'unassigned', 'blockerProposals', 'customerEscalations', 'newThisWeek', 'missingComponent']:
+for f in ['totalOpen', 'untriaged', 'unassigned', 'blockerProposals', 'newThisWeek', 'missingComponent']:
     assert f in sm, f'Summary missing: {f}'
 "
 }
@@ -253,16 +253,6 @@ assert d['summary']['blockerProposals'] >= 1
 "
 }
 
-@test "bug-overview: categorizes customer escalations from sfdcCaseCount" {
-  run cmd_bug_overview "Node Devices"
-  echo "$output" | python3 -c "
-import json, sys
-d = json.load(sys.stdin)
-escalation_keys = [b['key'] for b in d['customerEscalations']]
-assert 'OCPBUGS-99003' in escalation_keys, f'OCPBUGS-99003 (has sfdcCaseCount) should be an escalation, got: {escalation_keys}'
-assert d['summary']['customerEscalations'] >= 1
-"
-}
 
 @test "bug-overview: no shape warnings on stderr for valid data" {
   run cmd_bug_overview "Node Devices"
@@ -393,7 +383,7 @@ if d['epics']:
 @test "pickup-data: valid JSON with all categories" {
   run cmd_pickup_data "Node Devices"
   assert_valid_json "$output"
-  for key in sprint unassignedSprintItems unassignedBugs customerEscalations summary; do
+  for key in sprint unassignedSprintItems unassignedBugs summary; do
     assert_has_key "$output" "$key"
   done
 }
@@ -406,24 +396,9 @@ d = json.load(sys.stdin)
 sm = d['summary']
 assert sm['sprintItems'] == len(d['unassignedSprintItems'])
 assert sm['bugs'] == len(d['unassignedBugs'])
-assert sm['escalations'] == len(d['customerEscalations'])
 "
 }
 
-@test "pickup-data: identifies escalations from sfdcCaseCount" {
-  run cmd_pickup_data "Node Devices"
-  echo "$output" | python3 -c "
-import json, sys
-d = json.load(sys.stdin)
-escalation_keys = [b['key'] for b in d['customerEscalations']]
-# OCPBUGS-99003 has sfdcCaseCount set — should appear as escalation
-assert 'OCPBUGS-99003' in escalation_keys, f'Expected OCPBUGS-99003 in escalations, got: {escalation_keys}'
-# Escalations should be a subset of unassigned bugs
-bug_keys = {b['key'] for b in d['unassignedBugs']}
-for ek in escalation_keys:
-    assert ek in bug_keys, f'Escalation {ek} not in unassigned bugs'
-"
-}
 
 @test "pickup-data: finds unassigned sprint items from fixture" {
   run cmd_pickup_data "Node Devices"

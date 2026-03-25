@@ -25,24 +25,19 @@ cmd_pickup_data() {
 
   local bug_fields="[\"key\",\"summary\",\"status\",\"assignee\",\"priority\",\"issuetype\",\"${CF_STORY_POINTS}\"]"
 
-  local comp_filter="component in (${TEAM_BUG_COMPONENTS})"
-
-  # 3 queries: sprint items + unassigned bugs + escalation-labeled bugs
+  # 2 queries: sprint items + unassigned bugs
   parallel_init
   parallel_run "issues" cmd_sprint_issues "$sprint_id"
   parallel_run "bugs" cmd_search \
-    "project = OCPBUGS AND ${comp_filter} AND assignee is EMPTY AND status not in (CLOSED, Verified, Done) ORDER BY priority ASC, created ASC" 50 "$bug_fields"
-  parallel_run "escalation_labeled" cmd_search \
-    "project = OCPBUGS AND ${comp_filter} AND labels in (\"escalation\", \"Escalation\", \"Escalation🔥\") AND assignee is EMPTY AND status not in (CLOSED, Verified, Done) ORDER BY priority ASC" 50 '["key"]'
+    "project = OCPBUGS AND component in (${TEAM_BUG_COMPONENTS}) AND assignee is EMPTY AND status not in (CLOSED, Verified, Done) ORDER BY priority ASC, created ASC" 50 "$bug_fields"
   parallel_wait_all || true
 
-  python3 - "$sprint_json" "$(parallel_get issues)" "$(parallel_get bugs)" "$(parallel_get escalation_labeled)" <<'PYEOF'
+  python3 - "$sprint_json" "$(parallel_get issues)" "$(parallel_get bugs)" <<'PYEOF'
 import json, sys
 
 sprint = json.loads(sys.argv[1])
 issues_data = json.loads(sys.argv[2])
 bugs_data = json.loads(sys.argv[3])
-escalation_keys = {i["key"] for i in json.loads(sys.argv[4]).get("issues", [])}
 
 def extract(data):
     items = []
@@ -62,18 +57,14 @@ def extract(data):
 BOT_ACCOUNTS = {"Node Team Bot Account"}
 unassigned_sprint = [i for i in extract(issues_data) if i["assignee"] in ({"Unassigned"} | BOT_ACCOUNTS)]
 unassigned_bugs = extract(bugs_data)
-# Escalations identified by Escalation label
-escalations = [b for b in unassigned_bugs if b["key"] in escalation_keys]
 
 result = {
     "sprint": {"id": sprint["id"], "name": sprint["name"]},
     "unassignedSprintItems": unassigned_sprint,
     "unassignedBugs": unassigned_bugs,
-    "customerEscalations": escalations,
     "summary": {
         "sprintItems": len(unassigned_sprint),
         "bugs": len(unassigned_bugs),
-        "escalations": len(escalations),
     },
 }
 print(json.dumps(result))

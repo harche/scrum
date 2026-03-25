@@ -5,12 +5,12 @@ Run a bug triage session across all Node components.
 1. **Fetch all bug data (no team selection needed):**
    `bin/jira.sh bug-overview all`
 
-   This searches ALL Node components and both team rosters. Returns: `summary` (totalOpen, untriaged, unassigned, blockerProposals, customerEscalations, newThisWeek, missingComponent), and arrays: `untriaged`, `unassigned`, `blockerProposals`, `customerEscalations`, `newThisWeek`, `missingComponent`, `allOpen`.
+   This searches ALL Node components and both team rosters. Returns: `summary` (totalOpen, untriaged, unassigned, blockerProposals, newThisWeek, missingComponent, excludedExternalCVEs), and arrays: `untriaged`, `unassigned`, `blockerProposals`, `newThisWeek`, `missingComponent`, `allOpen`.
 
 ## Output
 
 ### Triage Summary
-From `summary`: Total open bugs, Untriaged, Unassigned, Blocker proposals, Customer escalations, New this week, Missing/out-of-scope component, Excluded external CVEs.
+From `summary`: Total open bugs, Untriaged, Unassigned, Blocker proposals, New this week, Missing/out-of-scope component, Excluded external CVEs.
 
 ### All Categories — Show Everything Up Front
 
@@ -28,11 +28,7 @@ Bugs with no owner (or assigned to bot account) — need assignment.
 Bugs proposed as release blockers — need approve/reject decision.
 | # | Key | Summary | Priority | Status | Assignee |
 
-**Category 4: Customer Escalations** (from `customerEscalations[]`)
-Bugs with linked SFDC support cases — customer-facing.
-| # | Key | Summary | Priority | Status | Assignee |
-
-**Category 5: Missing/Out-of-Scope Component** (from `missingComponent[]`)
+**Category 4: Missing/Out-of-Scope Component** (from `missingComponent[]`)
 Bugs assigned to team members but tagged with non-Node components or no component at all.
 | # | Key | Summary | Priority | Status | Assignee | Components |
 
