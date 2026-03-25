@@ -39,13 +39,14 @@ Prepare a summary for the weekly standup/grooming meeting.
 - Sprint name, days elapsed / total days, items done / total, points completed / total (from `sprint` and `summary`)
 
 ### Sprint Items
-Full table of all sprint issues from `byStatus`, grouped by status, sorted by assignee within each group:
+Full table of all sprint issues from `byStatus`, grouped by assignee (alphabetical), sorted by status within each group:
 
-| # | Key | Summary | Status | Assignee | Pts | Latest Comment |
-|---|-----|---------|--------|----------|-----|----------------|
+| # | Key | Summary | Status | Pts | Latest Comment |
+|---|-----|---------|--------|-----|----------------|
 
-- **Latest Comment:** From `latestComment` field — show as "_author (date): body_". Truncate body to ~80 chars if longer. Show "—" if no comment.
-- Group order: Closed/Done first, then Code Review, then In Progress, then other statuses.
+- **Group header:** `#### Assignee Name` (or `#### Unassigned` for items with no assignee)
+- **Status sort within each person:** Closed/Done first, then Code Review, then In Progress, then other statuses.
+- **Latest Comment:** From `latestComment` field — show as "_(date): body_". Omit the author name since it's usually the assignee (redundant with the group header). Truncate body to ~80 chars if longer. Show "—" if no comment.
 
 ### Blockers & Risks
 - Items from `blockers` array (Blocked field set)
@@ -59,16 +60,6 @@ From `newBugs` array. "None" if empty.
 From `discussionTopics` array:
 - Items needing grooming (no story points, no assignee)
 - Items that may need to be descoped or carried over (still In Progress with sprint ending soon)
-
-### Jira Activity (Last 7 Days)
-Table from `memberActivity`:
-
-| # | Member | Sprint Items | Jira Comments |
-|---|--------|-------------|---------------|
-
-For each member:
-- **Sprint Items:** count by status from `statusSummary` (e.g., "2 Done, 1 In Progress") or "—" if none
-- **Jira Comments:** `commentCount7d`
 
 Always include clickable Jira URLs and GitHub URLs.
 
