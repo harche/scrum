@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Scrum Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app">
+    <header>
+      <h1>Scrum Dashboard</h1>
+      <select id="team-selector">
+        <option value="Node Devices">Node Devices (DRA)</option>
+        <option value="Node Core">Node Core</option>
+      </select>
+      <div class="quick-actions">
+        <button class="quick-btn" data-action="Show sprint status for {team}">Sprint Status</button>
+        <button class="quick-btn" data-action="Run bug triage for {team}">Bug Triage</button>
+        <button class="quick-btn" data-action="Prepare standup for {team}">Standup</button>
+        <button class="quick-btn" data-action="Show my board for {team}">My Board</button>
+        <button class="quick-btn" data-action="Show my PRs">My PRs</button>
+      </div>
+    </header>
+
+    <div id="main-container">
+      <aside id="history-panel">
+        <div class="history-header">
+          <h2>Chats</h2>
+          <button id="new-chat-btn" title="New Chat">+ New</button>
+        </div>
+        <div id="conversation-list"></div>
+      </aside>
+
+      <main id="chat-area">
+        <div id="messages">
+          <div class="welcome">
+            <h2>Scrum Master Dashboard</h2>
+            <p>Chat with your scrum assistant or use the quick actions above.</p>
+            <p class="welcome-hint">Try: "Show sprint status" or "Triage bugs for Node Devices"</p>
+          </div>
+        </div>
+        <form id="chat-form">
+          <textarea id="user-input" placeholder="Ask about sprint status, bugs, team workload..." rows="2"></textarea>
+          <button type="submit" id="send-btn">Send</button>
+          <button type="button" id="stop-btn" class="hidden">Stop</button>
+        </form>
+      </main>
+    </div>
+  </div>
+
+  <script src="markdown.js"></script>
+  <script src="components.js"></script>
+  <script src="history.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
