@@ -23,22 +23,26 @@ cmd_pickup_data() {
   local sprint_id
   sprint_id=$(echo "$sprint_json" | python3 -c "import json,sys; print(json.load(sys.stdin)['id'])")
 
-  # Extended fields: include SFDC counter for escalation categorization
-  local bug_fields="[\"key\",\"summary\",\"status\",\"assignee\",\"priority\",\"issuetype\",\"${CF_STORY_POINTS}\",\"${CF_SFDC_COUNTER}\"]"
+  local bug_fields="[\"key\",\"summary\",\"status\",\"assignee\",\"priority\",\"issuetype\",\"${CF_STORY_POINTS}\"]"
 
-  # 2 queries (was 3): sprint items + all unassigned bugs (categorize escalations in Python)
+  local comp_filter="component in (${TEAM_BUG_COMPONENTS})"
+
+  # 3 queries: sprint items + unassigned bugs + escalation-labeled bugs
   parallel_init
   parallel_run "issues" cmd_sprint_issues "$sprint_id"
   parallel_run "bugs" cmd_search \
-    "project = OCPBUGS AND component in (${TEAM_BUG_COMPONENTS}) AND assignee is EMPTY AND status not in (CLOSED, Verified, Done) ORDER BY priority ASC, created ASC" 50 "$bug_fields"
+    "project = OCPBUGS AND ${comp_filter} AND assignee is EMPTY AND status not in (CLOSED, Verified, Done) ORDER BY priority ASC, created ASC" 50 "$bug_fields"
+  parallel_run "escalation_labeled" cmd_search \
+    "project = OCPBUGS AND ${comp_filter} AND labels in (\"escalation\", \"Escalation\", \"Escalation🔥\") AND assignee is EMPTY AND status not in (CLOSED, Verified, Done) ORDER BY priority ASC" 50 '["key"]'
   parallel_wait_all || true
 
-  python3 - "$sprint_json" "$(parallel_get issues)" "$(parallel_get bugs)" <<'PYEOF'
+  python3 - "$sprint_json" "$(parallel_get issues)" "$(parallel_get bugs)" "$(parallel_get escalation_labeled)" <<'PYEOF'
 import json, sys
 
 sprint = json.loads(sys.argv[1])
 issues_data = json.loads(sys.argv[2])
 bugs_data = json.loads(sys.argv[3])
+escalation_keys = {i["key"] for i in json.loads(sys.argv[4]).get("issues", [])}
 
 def extract(data):
     items = []
@@ -51,7 +55,6 @@ def extract(data):
             "type": f.get("issuetype", {}).get("name", ""),
             "points": f.get("customfield_10028") or 0,
             "assignee": (f.get("assignee") or {}).get("displayName", "Unassigned"),
-            "sfdcCaseCount": f.get("customfield_10978"),
         })
     return items
 
@@ -59,16 +62,8 @@ def extract(data):
 BOT_ACCOUNTS = {"Node Team Bot Account"}
 unassigned_sprint = [i for i in extract(issues_data) if i["assignee"] in ({"Unassigned"} | BOT_ACCOUNTS)]
 unassigned_bugs = extract(bugs_data)
-# Escalations are a subset of unassigned bugs (was a separate JQL query)
-escalations = [b for b in unassigned_bugs if b.get("sfdcCaseCount") is not None]
-
-# Shape assertion — warn if sfdcCaseCount has unexpected type
-for b in escalations[:3]:
-    val = b.get("sfdcCaseCount")
-    if not isinstance(val, (str, int, float)):
-        print(f"SHAPE WARNING: sfdcCaseCount is {type(val).__name__}, expected str/number "
-              f"(on {b['key']}). Escalation detection may be broken.", file=sys.stderr)
-        break
+# Escalations identified by Escalation label
+escalations = [b for b in unassigned_bugs if b["key"] in escalation_keys]
 
 result = {
     "sprint": {"id": sprint["id"], "name": sprint["name"]},

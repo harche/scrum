@@ -26,10 +26,10 @@ clauses = ' OR '.join(f'assignee = \"{n}\"' for n in names)
 print(clauses)
 ")
 
-  # ── Extended fields: include SFDC counter for escalation categorization ──
-  local bug_fields="[\"key\",\"summary\",\"status\",\"assignee\",\"priority\",\"issuetype\",\"fixVersions\",\"components\",\"${CF_STORY_POINTS}\",\"${CF_RELEASE_BLOCKER}\",\"${CF_SFDC_COUNTER}\"]"
+  # ── Extended fields ──
+  local bug_fields="[\"key\",\"summary\",\"status\",\"assignee\",\"priority\",\"issuetype\",\"fixVersions\",\"components\",\"${CF_STORY_POINTS}\",\"${CF_RELEASE_BLOCKER}\"]"
 
-  # ── 3 queries (was 7): all_open covers untriaged/unassigned/blockers/escalations
+  # ── 4 queries: all_open + new_this_week + team_no_component + escalation-labeled
   parallel_init
 
   parallel_run "all_open" cmd_search \
@@ -43,6 +43,10 @@ print(clauses)
   parallel_run "team_no_component" cmd_search \
     "project = OCPBUGS AND (${assignee_emails}) AND (component is EMPTY OR component not in (${ALL_NODE_COMPONENTS})) AND status not in (Closed, Done, Verified) ORDER BY priority ASC, created DESC" 50
 
+  # Customer escalations — bugs with Escalation label (case variants)
+  parallel_run "escalation_labeled" cmd_search \
+    "project = OCPBUGS AND ${comp_filter} AND labels in (\"escalation\", \"Escalation\", \"Escalation🔥\") AND status not in (Closed, Done, Verified) ORDER BY priority ASC" 50 '["key","summary"]'
+
   parallel_wait_all || true
 
   # ── Assemble results — categorize from all_open in Python ────────────────
@@ -51,6 +55,7 @@ print(clauses)
     "$(parallel_get new_this_week)" \
     "$(parallel_get team_no_component)" \
     "$roster_json" \
+    "$(parallel_get escalation_labeled)" \
     <<'PYEOF'
 import json, sys
 
@@ -71,7 +76,6 @@ def extract_bugs(data_str):
             "releaseBlocker": rb,
             "fixVersions": [v.get("name", "") for v in (f.get("fixVersions") or [])],
             "components": components,
-            "sfdcCaseCount": f.get("customfield_10978"),
         })
     return bugs
 
@@ -81,6 +85,9 @@ missing_component = extract_bugs(sys.argv[3])
 
 # Build roster name set for CVE filtering
 roster_names = {m["name"] for m in json.loads(sys.argv[4])}
+
+# Build escalation key set from label-based query
+escalation_keys = {i["key"] for i in json.loads(sys.argv[5]).get("issues", [])}
 
 # Filter out CVE bugs that are ASSIGNED to non-roster members (handled by other teams)
 def is_external_cve(b):
@@ -110,12 +117,12 @@ unassigned = [b for b in all_open if b["assignee"] in ({"Unassigned"} | BOT_ACCO
 blocker_proposals = [b for b in all_open
                      if isinstance(b.get("releaseBlocker"), dict)
                      and b["releaseBlocker"].get("value") == "Proposed"]
-escalations = [b for b in all_open if b.get("sfdcCaseCount") is not None]
+escalations = [b for b in all_open if b["key"] in escalation_keys]
 
 # Canary: if we have bugs but nothing categorized, field formats may have changed
 if len(all_open) > 10 and (len(untriaged) + len(unassigned) + len(blocker_proposals) + len(escalations)) == 0:
     print(f"CANARY: {len(all_open)} open bugs but 0 categorized. "
-          f"Check releaseBlocker (customfield_10847), sfdcCaseCount (customfield_10978), "
+          f"Check releaseBlocker (customfield_10847), escalation labels, "
           f"priority values.", file=sys.stderr)
 
 # Merge missing-component bugs into allOpen (deduplicated)
