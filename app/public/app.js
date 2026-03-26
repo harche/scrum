@@ -91,7 +91,7 @@
     messagesEl.innerHTML = `<div class="welcome">
       <h2>Scrum Master Dashboard</h2>
       <p>Chat with your scrum assistant or search commands above.</p>
-      <p class="welcome-hint">Press / or Cmd+K to search commands, or just type in the chat.</p>
+      <p class="welcome-hint">Press <kbd>/</kbd> or <kbd>Cmd+K</kbd> to search commands, or just type in the chat.</p>
     </div>`;
   }
 
