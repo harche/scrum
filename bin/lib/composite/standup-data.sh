@@ -1,7 +1,7 @@
 #!/bin/bash
 # Composite: standup-data <team> [--stream]
-# Returns sprint dashboard + recent updates + new bugs + per-member comments
-# 2 data queries (was 3 — removed redundant "recent" search, derived from updated field)
+# Returns sprint dashboard + recent updates + per-member comments
+# 1 data query + N comment fetches
 # Serves: /standup, /my-standup, /team-member
 
 [[ -n "${_COMPOSITE_STANDUP_DATA_LOADED:-}" ]] && return 0
@@ -31,14 +31,12 @@ cmd_standup_data() {
   parallel_init
 
   parallel_run "issues" cmd_sprint_issues "$sprint_id" 100 "${ISSUE_FIELDS},updated"
-  parallel_run "new_bugs" cmd_search "project = OCPBUGS AND component in (${TEAM_BUG_COMPONENTS}) AND created >= -7d ORDER BY created DESC" 50
   parallel_run "roster" team_roster "$team"
 
   parallel_wait_all || true
 
-  local issues_json bugs_json roster_json
+  local issues_json roster_json
   issues_json=$(parallel_get "issues")
-  bugs_json=$(parallel_get "new_bugs")
   roster_json=$(parallel_get "roster")
 
   # ── Get issue keys for comment fetching ──────────────────────────────────
@@ -86,17 +84,16 @@ print(' '.join(keys))
   local adf_py
   adf_py="$(cd "$(dirname "${BASH_SOURCE[0]}")/../util" && pwd)/adf.py"
 
-  python3 - "$sprint_json" "$roster_json" "$bugs_json" "$comments_combined" "$adf_py" "$issues_json" <<'PYEOF'
+  python3 - "$sprint_json" "$roster_json" "$comments_combined" "$adf_py" "$issues_json" <<'PYEOF'
 import json, sys, importlib.util
 from datetime import datetime, timedelta, timezone
 from collections import Counter
 
 sprint = json.loads(sys.argv[1])
 roster = json.loads(sys.argv[2])
-bugs_data = json.loads(sys.argv[3])
-all_comments = json.loads(sys.argv[4])
-adf_py_path = sys.argv[5]
-data = json.loads(sys.argv[6])
+all_comments = json.loads(sys.argv[3])
+adf_py_path = sys.argv[4]
+data = json.loads(sys.argv[5])
 issues = data.get("issues", [])
 
 # Load ADF converter
@@ -121,7 +118,6 @@ total_points = 0
 done_points = 0
 blocked_items = []
 at_risk = []
-discussion_topics = []
 _shape_warned = set()
 
 for issue in issues:
@@ -185,12 +181,6 @@ for issue in issues:
     if group not in ("done",) and days_remaining <= 3:
         at_risk.append(item)
 
-    # Discussion topics
-    if not points and group != "done":
-        discussion_topics.append({"key": key, "summary": summary, "reason": "No story points"})
-    if assignee_name in ("Unassigned", "Node Team Bot Account") and group != "done":
-        discussion_topics.append({"key": key, "summary": summary, "reason": "Unassigned (bot default)"})
-
     # Workload
     wl = team_workload.setdefault(assignee_name, {
         "member": assignee_name,
@@ -222,18 +212,6 @@ for key, comment_data in all_comments.items():
                     })
         except (ValueError, TypeError):
             pass
-
-# New bugs
-new_bugs = []
-for bug in bugs_data.get("issues", []):
-    bf = bug.get("fields", {})
-    new_bugs.append({
-        "key": bug.get("key", ""),
-        "summary": bf.get("summary", ""),
-        "priority": bf.get("priority", {}).get("name", ""),
-        "status": bf.get("status", {}).get("name", ""),
-        "assignee": (bf.get("assignee") or {}).get("displayName", "Unassigned"),
-    })
 
 # Recently updated keys (derived from sprint issues' updated field — was a separate query)
 recent_keys = []
@@ -275,6 +253,14 @@ by_status = {}
 for group in sorted(status_groups.keys(), key=lambda g: STATUS_ORDER.get(g, 99)):
     by_status[group] = sorted(status_groups[group], key=lambda i: i["assignee"])
 
+# Group by assignee (alphabetical), sorted by status within each person
+by_assignee = {}
+for group_items in status_groups.values():
+    for item in group_items:
+        by_assignee.setdefault(item["assignee"], []).append(item)
+for name in by_assignee:
+    by_assignee[name].sort(key=lambda i: STATUS_ORDER.get(i["statusGroup"], 99))
+
 result = {
     "sprint": {
         "id": sprint["id"], "name": sprint["name"],
@@ -294,11 +280,10 @@ result = {
         "donePoints": done_points,
     },
     "byStatus": by_status,
+    "byAssignee": dict(sorted(by_assignee.items(), key=lambda x: (x[0] == "Unassigned", x[0].lower()))),
     "blockers": blocked_items,
     "atRisk": at_risk,
-    "newBugs": new_bugs,
     "recentlyUpdatedKeys": recent_keys,
-    "discussionTopics": discussion_topics,
     "memberActivity": roster_out,
     "teamWorkload": sorted(team_workload.values(), key=lambda w: w["total"], reverse=True),
 }

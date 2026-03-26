@@ -6,7 +6,6 @@
   const sendBtn = document.getElementById('send-btn');
   const stopBtn = document.getElementById('stop-btn');
   const teamSelector = document.getElementById('team-selector');
-  const quickBtns = document.querySelectorAll('.quick-btn');
 
   let conversationHistory = [];
   let activeStreams = 0;
@@ -19,7 +18,6 @@
     activeControllers.add(controller);
     sendBtn.classList.add('hidden');
     stopBtn.classList.remove('hidden');
-    quickBtns.forEach(b => b.disabled = true);
   }
 
   function streamEnded(controller) {
@@ -28,7 +26,6 @@
     if (activeStreams === 0) {
       stopBtn.classList.add('hidden');
       sendBtn.classList.remove('hidden');
-      quickBtns.forEach(b => b.disabled = false);
       userInput.focus();
     }
   }
@@ -93,24 +90,10 @@
   function showWelcome() {
     messagesEl.innerHTML = `<div class="welcome">
       <h2>Scrum Master Dashboard</h2>
-      <p>Chat with your scrum assistant or use the quick actions above.</p>
-      <p class="welcome-hint">Try: "Show sprint status" or "Triage bugs for Node Devices"</p>
+      <p>Chat with your scrum assistant or search commands above.</p>
+      <p class="welcome-hint">Press / or Cmd+K to search commands, or just type in the chat.</p>
     </div>`;
   }
-
-  quickBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
-      if (activeStreams > 0) return;
-      const action = btn.dataset.action.replace('{team}', teamSelector.value);
-      if (window.chatHistory) {
-        window.chatHistory.startNewChat();
-      } else {
-        conversationHistory = [];
-        showWelcome();
-      }
-      submitUserMessage(action);
-    });
-  });
 
   function renderAllMessages(messages) {
     messagesEl.innerHTML = '';
@@ -135,6 +118,8 @@
 
   // Allow clicking links even while streaming — fires a parallel request
   window.sendChatMessage = function(text) {
+    // User clicked something intentionally — re-enable auto-scroll so they see the result
+    userScrolledUp = false;
     submitUserMessage(text);
   };
 
@@ -218,14 +203,15 @@
     userInput.focus();
   };
 
-  function addCardToolbar(container, cardId) {
+  function addCardToolbar(container, cardId, showFork = true) {
     const toolbar = document.createElement('div');
     toolbar.className = 'card-toolbar';
     const forkBtn = document.createElement('button');
-    forkBtn.className = 'card-tool-btn';
+    forkBtn.className = 'card-tool-btn card-tool-fork';
     forkBtn.title = 'Fork into new chat';
     forkBtn.innerHTML = '&#9095;';
     forkBtn.addEventListener('click', (e) => { e.stopPropagation(); window.forkFromCard(cardId); });
+    if (!showFork) forkBtn.style.display = 'none';
     const dismissBtn = document.createElement('button');
     dismissBtn.className = 'card-tool-btn card-tool-dismiss';
     dismissBtn.title = 'Dismiss card';
@@ -308,6 +294,7 @@
     let hadToolCall = false;
     let hadRichData = false;
     let hadError = false;
+    const pendingForkBtns = [];
     let thinkingRemoved = false;
 
     function removeThinking() {
@@ -476,7 +463,8 @@
                     rawData: rawJson.length < 50000 ? rawJson : null,
                   });
                   window.renderComponent(container, data.type, data.data);
-                  addCardToolbar(container, cardId);
+                  addCardToolbar(container, cardId, false);
+                  pendingForkBtns.push(container.querySelector('.card-tool-fork'));
                   contentEl.appendChild(container);
                   scrollToBottom();
                 }
@@ -502,9 +490,10 @@
         }
       }
 
-      // Flush any pending markdown render
       flushRender();
       removeThinking();
+      // Stream complete — reveal fork buttons on cards
+      for (const btn of pendingForkBtns) if (btn) btn.style.display = '';
 
       if (allText) {
         conversationHistory.push({ role: 'assistant', content: allText });
@@ -521,6 +510,7 @@
     } catch (error) {
       flushRender();
       removeThinking();
+      for (const btn of pendingForkBtns) if (btn) btn.style.display = '';
       if (error.name === 'AbortError') {
         const notice = document.createElement('div');
         notice.className = 'interrupted-notice';

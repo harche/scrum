@@ -471,17 +471,6 @@ add_result "standup-data" "$result"
 
 sleep 1
 
-# 9b. New bugs
-comp_bugs=$(echo "$composite" | python3 -c "
-import json, sys; print(json.dumps(sorted(b['key'] for b in json.load(sys.stdin).get('newBugs', []))))
-")
-direct_bugs=$(direct_search "project = OCPBUGS AND component in (${BUG_COMPONENTS}) AND created >= -7d ORDER BY created DESC" 50)
-direct_bugs_keys=$(echo "$direct_bugs" | extract_keys)
-result=$(compare_keys "new bugs (7d)" "$comp_bugs" "$direct_bugs_keys")
-add_result "standup-data" "$result"
-
-sleep 1
-
 # ══════════════════════════════════════════════════════════════════════════════
 # 10. ISSUE-DEEP-DIVE (use a known issue from the sprint)
 # ══════════════════════════════════════════════════════════════════════════════

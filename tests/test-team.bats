@@ -63,7 +63,7 @@ setup() {
   run team_roster "Node Devices"
   local count
   count=$(echo "$output" | python3 -c "import json,sys; print(len(json.load(sys.stdin)))")
-  [[ "$count" == "9" ]]
+  [[ "$count" == "10" ]]
 }
 
 @test "team_roster entries have name and github fields" {
@@ -81,7 +81,7 @@ for m in members:
   run team_roster "Node Core"
   local count
   count=$(echo "$output" | python3 -c "import json,sys; print(len(json.load(sys.stdin)))")
-  [[ "$count" == "16" ]]
+  [[ "$count" == "17" ]]
 }
 
 # ── team_sprint ────────────────────────────────────────────────────────────────

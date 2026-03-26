@@ -14,12 +14,9 @@
         <option value="Node Devices">Node Devices (DRA)</option>
         <option value="Node Core">Node Core</option>
       </select>
-      <div class="quick-actions">
-        <button class="quick-btn" data-action="Show sprint status for {team}">Sprint Status</button>
-        <button class="quick-btn" data-action="Run bug triage for {team}">Bug Triage</button>
-        <button class="quick-btn" data-action="Prepare standup for {team}">Standup</button>
-        <button class="quick-btn" data-action="Show my board for {team}">My Board</button>
-        <button class="quick-btn" data-action="Show my PRs">My PRs</button>
+      <div class="cmd-search-wrapper">
+        <input id="cmd-search" type="text" placeholder="/ Search commands..." autocomplete="off" spellcheck="false">
+        <div id="cmd-dropdown" class="cmd-dropdown hidden"></div>
       </div>
     </header>
 
@@ -53,5 +50,6 @@
   <script src="components.js"></script>
   <script src="history.js"></script>
   <script src="app.js"></script>
+  <script src="commands.js"></script>
 </body>
 </html>

@@ -99,7 +99,7 @@ for m in roster:
 @test "standup-data: valid JSON with all required keys" {
   run cmd_standup_data "Node Devices"
   assert_valid_json "$output"
-  for key in sprint summary byStatus blockers atRisk newBugs discussionTopics memberActivity teamWorkload; do
+  for key in sprint summary byStatus blockers atRisk memberActivity teamWorkload; do
     assert_has_key "$output" "$key"
   done
 }
@@ -119,18 +119,6 @@ assert expected_names.issubset(names), f'Missing roster members: {expected_names
 for m in members:
     for f in ['name', 'github', 'sprintItems', 'commentCount7d', 'statusSummary']:
         assert f in m, f'Member {m[\"name\"]} missing field: {f}'
-"
-}
-
-@test "standup-data: discussionTopics flags items without points" {
-  run cmd_standup_data "Node Devices"
-  echo "$output" | python3 -c "
-import json, sys
-d = json.load(sys.stdin)
-# Fixture OCPNODE-1003 has no points and is To Do
-topics = d['discussionTopics']
-keys = [t['key'] for t in topics]
-assert 'OCPNODE-1003' in keys, f'Expected OCPNODE-1003 in discussion topics, got: {keys}'
 "
 }
 

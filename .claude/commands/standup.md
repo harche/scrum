@@ -7,7 +7,7 @@ Prepare a summary for the weekly standup/grooming meeting.
 2. **Fetch all standup data in one call:**
    `bin/jira.sh standup-data "<team>"`
 
-   This returns a single JSON blob with: `sprint` (id, name, dates, progress), `summary` (counts, points), `byStatus` (issues grouped), `blockers`, `atRisk`, `newBugs`, `discussionTopics`, `memberActivity` (per roster member: sprintItems, commentCount7d, statusSummary), `teamWorkload`.
+   This returns a single JSON blob with: `sprint` (id, name, dates, progress), `summary` (counts, points), `byAssignee` (issues grouped by assignee, sorted by status within each), `byStatus` (issues grouped by status), `blockers`, `atRisk`, `memberActivity`, `teamWorkload`.
 
 3. **Display the output** (see Output below).
 
@@ -39,27 +39,17 @@ Prepare a summary for the weekly standup/grooming meeting.
 - Sprint name, days elapsed / total days, items done / total, points completed / total (from `sprint` and `summary`)
 
 ### Sprint Items
-Full table of all sprint issues from `byStatus`, grouped by assignee (alphabetical), sorted by status within each group:
+From `byAssignee` — one table per assignee (header: `#### Assignee Name`), items already sorted by status:
 
 | # | Key | Summary | Status | Pts | Latest Comment |
 |---|-----|---------|--------|-----|----------------|
 
-- **Group header:** `#### Assignee Name` (or `#### Unassigned` for items with no assignee)
-- **Status sort within each person:** Closed/Done first, then Code Review, then In Progress, then other statuses.
-- **Latest Comment:** From `latestComment` field — show as "_(date): body_". Omit the author name since it's usually the assignee (redundant with the group header). Truncate body to ~80 chars if longer. Show "—" if no comment.
+- **Latest Comment:** From `latestComment` field — show as "_(date): body_". Truncate body to ~80 chars if longer. Show "—" if no comment.
 
 ### Blockers & Risks
 - Items from `blockers` array (Blocked field set)
 - Items from `atRisk` array
 - Bugs with priority Blocker or Critical
-
-### New Bugs (Last 7 Days)
-From `newBugs` array. "None" if empty.
-
-### Discussion Topics
-From `discussionTopics` array:
-- Items needing grooming (no story points, no assignee)
-- Items that may need to be descoped or carried over (still In Progress with sprint ending soon)
 
 Always include clickable Jira URLs and GitHub URLs.
 
