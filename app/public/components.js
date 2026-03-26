@@ -101,16 +101,21 @@
   function issueRow(issue) {
     const blocked = issue.blocked ? '<span class="blocked-flag" title="Blocked">BLOCKED</span>' : '';
     const rb = issue.releaseBlocker ? '<span class="rb-flag" title="Release Blocker">RB</span>' : '';
-    return `<div class="issue-row" onclick="window.sendChatMessage('Investigate ${escAttr(issue.key)}')" title="Click to investigate">
-      <span class="issue-row-key">${jiraLink(issue.key)}${jiraExtLink(issue.key)}</span>
-      ${statusBadge(issue.status, issue.statusGroup)}
-      ${priorityIcon(issue.priority)}
-      ${blocked}${rb}
-      <span class="issue-row-summary">${esc(issue.summary)}</span>
-      <span class="issue-row-right">
-        ${assigneeBadge(issue.assignee)}
-        ${pointsPill(issue.points)}
-      </span>
+    const lc = issue.latestComment;
+    const commentHtml = lc ? `<div class="issue-row-comment"><span class="issue-row-comment-author">${esc(lc.author)}</span> <span class="issue-row-comment-date">${formatDate(lc.created)}</span><span class="issue-row-comment-body">${esc((lc.body || '').slice(0, 120))}${(lc.body || '').length > 120 ? '...' : ''}</span></div>` : '';
+    return `<div class="issue-row-wrap" onclick="window.sendChatMessage('Investigate ${escAttr(issue.key)}')" title="Click to investigate">
+      <div class="issue-row">
+        <span class="issue-row-key">${jiraLink(issue.key)}${jiraExtLink(issue.key)}</span>
+        ${statusBadge(issue.status, issue.statusGroup)}
+        ${priorityIcon(issue.priority)}
+        ${blocked}${rb}
+        <span class="issue-row-summary">${esc(issue.summary)}</span>
+        <span class="issue-row-right">
+          ${assigneeBadge(issue.assignee)}
+          ${pointsPill(issue.points)}
+        </span>
+      </div>
+      ${commentHtml}
     </div>`;
   }
 
