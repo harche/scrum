@@ -1,4 +1,4 @@
-// Inline command search — dropdown in header
+// Command palette — drop-up from the unified chat input
 (function() {
   const COMMANDS = [
     { id: 'sprint-status',    label: 'Sprint Status',          desc: 'Current sprint dashboard',                   category: 'Scrum Master', action: 'Show sprint status for {team}' },
@@ -27,7 +27,9 @@
     { id: 'handoff',          label: 'Handoff',                desc: 'Prepare a handoff summary for transfer',     category: 'Issue', arg: 'key', prompt: 'Issue key:' },
   ];
 
-  const input = document.getElementById('cmd-search');
+  const HINT_HTML = '<div class="cmd-hint"><kbd>/</kbd> Filter commands, <kbd>\u2191</kbd><kbd>\u2193</kbd> navigate, <kbd>Enter</kbd> select, <kbd>Esc</kbd> dismiss</div>';
+
+  const input = document.getElementById('user-input');
   const dropdown = document.getElementById('cmd-dropdown');
   const teamSelector = document.getElementById('team-selector');
   const esc = window._escapeHtml;
@@ -35,11 +37,30 @@
   let selectedIdx = 0;
   let filtered = COMMANDS;
   let isOpen = false;
+  let lastQuery = null;
+
+  const COMMANDS_BY_ID = Object.fromEntries(COMMANDS.map(c => [c.id, c]));
+  const ARG_CMD_IDS = new Set(COMMANDS.filter(c => c.arg).map(c => c.id));
+  const SLASH_RE = /^\/(\S+)\s*(.*)/;
+
+  window._transformSlashCommand = function(text) {
+    const match = text.match(SLASH_RE);
+    if (!match) return null;
+    const cmd = COMMANDS_BY_ID[match[1]];
+    if (!cmd) return null;
+    const arg = match[2]?.trim();
+    if (cmd.arg && arg) {
+      return `${cmd.label} ${arg}`;
+    }
+    if (cmd.action && !cmd.arg) {
+      return cmd.action.replace('{team}', teamSelector.value);
+    }
+    return null;
+  };
 
   function open() {
     if (isOpen) return;
     isOpen = true;
-    render(input.value);
     dropdown.classList.remove('hidden');
   }
 
@@ -47,9 +68,16 @@
     isOpen = false;
     dropdown.classList.add('hidden');
     selectedIdx = 0;
+    lastQuery = null;
   }
 
   function render(query) {
+    if (query === lastQuery) {
+      updateSelection();
+      return;
+    }
+    lastQuery = query;
+
     const q = query.toLowerCase().trim();
     filtered = q
       ? COMMANDS.filter(c =>
@@ -59,7 +87,7 @@
 
     if (selectedIdx >= filtered.length) selectedIdx = Math.max(0, filtered.length - 1);
 
-    let html = '';
+    let html = HINT_HTML;
     let lastCategory = '';
     filtered.forEach((cmd, i) => {
       if (cmd.category !== lastCategory) {
@@ -75,55 +103,102 @@
     });
 
     if (!filtered.length) {
-      html = '<div class="cmd-empty">No matching commands</div>';
+      html += '<div class="cmd-empty">No matching commands</div>';
     }
 
     dropdown.innerHTML = html;
+    scrollToSelected();
+  }
 
+  function updateSelection() {
+    const prev = dropdown.querySelector('.cmd-selected');
+    if (prev) prev.classList.remove('cmd-selected');
+    const items = dropdown.querySelectorAll('.cmd-item');
+    if (items[selectedIdx]) {
+      items[selectedIdx].classList.add('cmd-selected');
+      items[selectedIdx].scrollIntoView({ block: 'nearest' });
+    }
+  }
+
+  function scrollToSelected() {
     const sel = dropdown.querySelector('.cmd-selected');
     if (sel) sel.scrollIntoView({ block: 'nearest' });
   }
 
   function execute(cmd) {
     close();
-    input.value = '';
-    input.blur();
     const team = teamSelector.value;
 
     if (cmd.arg) {
-      const value = window.prompt(cmd.prompt || `Enter ${cmd.arg}:`);
-      if (!value) return;
-      window.sendChatMessage(`${cmd.label} ${value}`);
+      // Put "/cmd-id " in the input — user types the arg and presses Enter
+      input.value = `/${cmd.id} `;
+      input.focus();
       return;
     }
 
+    input.value = '';
     if (cmd.action) {
       window.sendChatMessage(cmd.action.replace('{team}', team));
     }
   }
 
-  // Focus → show all commands
-  input.addEventListener('focus', open);
+  function activateCommandMode() {
+    input.focus();
+    input.value = '/';
+    input.dispatchEvent(new Event('input'));
+  }
 
-  // Typing filters
+  function isTypingArg(val) {
+    const match = val.match(/^\/(\S+)\s+/);
+    return match ? ARG_CMD_IDS.has(match[1]) : false;
+  }
+
   input.addEventListener('input', () => {
-    selectedIdx = 0;
-    if (!isOpen) open();
-    render(input.value);
+    const val = input.value;
+    if (val.startsWith('/')) {
+      if (isTypingArg(val)) {
+        // User is typing an argument after a known command — suppress palette
+        if (isOpen) close();
+        return;
+      }
+      const q = val.slice(1);
+      selectedIdx = 0;
+      if (!isOpen) open();
+      render(q);
+    } else if (isOpen) {
+      close();
+    }
   });
 
-  // Keyboard nav
   input.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') { close(); input.blur(); return; }
     if (!isOpen) return;
-    if (e.key === 'ArrowDown') { e.preventDefault(); selectedIdx = Math.min(selectedIdx + 1, filtered.length - 1); render(input.value); return; }
-    if (e.key === 'ArrowUp') { e.preventDefault(); selectedIdx = Math.max(selectedIdx - 1, 0); render(input.value); return; }
-    if (e.key === 'Enter' && filtered.length) { e.preventDefault(); execute(filtered[selectedIdx]); return; }
+
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      close();
+      input.value = '';
+      return;
+    }
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      selectedIdx = Math.min(selectedIdx + 1, filtered.length - 1);
+      updateSelection();
+      return;
+    }
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      selectedIdx = Math.max(selectedIdx - 1, 0);
+      updateSelection();
+      return;
+    }
+    if (e.key === 'Enter' && filtered.length) {
+      e.preventDefault();
+      execute(filtered[selectedIdx]);
+      return;
+    }
   });
 
-  // Click to execute
   dropdown.addEventListener('mousedown', (e) => {
-    // mousedown instead of click so it fires before blur
     const item = e.target.closest('.cmd-item');
     if (item) {
       e.preventDefault();
@@ -131,21 +206,15 @@
     }
   });
 
-  // Close on blur (with delay so click can fire first)
-  input.addEventListener('blur', () => {
-    setTimeout(close, 150);
-  });
-
-  // Global shortcut: Cmd+K or / (when not in input)
   document.addEventListener('keydown', (e) => {
     if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
       e.preventDefault();
-      input.focus();
+      activateCommandMode();
       return;
     }
-    if (e.key === '/' && !['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) {
+    if (e.key === '/' && !['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) {
       e.preventDefault();
-      input.focus();
+      activateCommandMode();
     }
   });
 })();

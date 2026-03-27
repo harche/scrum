@@ -24,10 +24,6 @@
         <option value="Node Devices">Node Devices (DRA)</option>
         <option value="Node Core">Node Core</option>
       </select>
-      <div class="cmd-search-wrapper">
-        <input id="cmd-search" type="text" placeholder="Search commands..." autocomplete="off" spellcheck="false">
-        <div id="cmd-dropdown" class="cmd-dropdown hidden"></div>
-      </div>
     </header>
 
     <div id="main-container">
@@ -43,12 +39,14 @@
         <div id="messages">
           <div class="welcome">
             <h2>Scrum Master Dashboard</h2>
-            <p>Chat with your scrum assistant or search commands above.</p>
-            <p class="welcome-hint">Press <kbd>/</kbd> or <kbd>Cmd+K</kbd> to search commands, or just type in the chat.</p>
+            <p>Chat with your scrum assistant. Type <kbd>/</kbd> to browse commands.</p>
           </div>
         </div>
         <form id="chat-form">
-          <textarea id="user-input" placeholder="Ask about sprint status, bugs, team workload..." rows="2"></textarea>
+          <div class="chat-input-wrapper">
+            <div id="cmd-dropdown" class="cmd-dropdown hidden"></div>
+            <textarea id="user-input" placeholder="Type / for commands, or ask anything..." rows="2"></textarea>
+          </div>
           <button type="submit" id="send-btn">Send</button>
           <button type="button" id="stop-btn" class="hidden">Stop</button>
         </form>

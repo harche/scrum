@@ -4,7 +4,9 @@ You are assisting a Scrum Master for sub-teams within the OpenShift Node team at
 
 ## Team Selection
 
-All slash commands that target a specific sprint must start by asking which team using `AskUserQuestion`:
+If the user's message includes a `[Team: ...]` prefix (e.g., `[Team: Node Devices (DRA)]`), the team has already been selected — use it directly. Do NOT ask again, do NOT deliberate, do NOT consider other teams even if a member appears on multiple rosters. Just use the provided team immediately.
+
+Otherwise (no `[Team: ...]` prefix), ask which team using `AskUserQuestion`:
 - **"Node Devices (DRA)"** or **"Node Core"**
 
 Based on the selection, use the corresponding config from the table below:

@@ -13,6 +13,7 @@ export function initDb(dbPath) {
     CREATE TABLE IF NOT EXISTS conversations (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       title TEXT NOT NULL,
+      session_id TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
@@ -27,6 +28,13 @@ export function initDb(dbPath) {
     );
   `);
 
+  // Migration: add session_id column if missing (existing databases)
+  try {
+    db.exec('ALTER TABLE conversations ADD COLUMN session_id TEXT');
+  } catch (_) {
+    // Column already exists
+  }
+
   const stmts = {
     listConversations: db.prepare(
       'SELECT id, title, created_at, updated_at FROM conversations ORDER BY updated_at DESC'
@@ -35,7 +43,7 @@ export function initDb(dbPath) {
       'INSERT INTO conversations (title) VALUES (?)'
     ),
     getConversation: db.prepare(
-      'SELECT id, title, created_at, updated_at FROM conversations WHERE id = ?'
+      'SELECT id, title, session_id, created_at, updated_at FROM conversations WHERE id = ?'
     ),
     updateConversation: db.prepare(
       'UPDATE conversations SET title = ?, updated_at = datetime(\'now\') WHERE id = ?'
@@ -51,6 +59,9 @@ export function initDb(dbPath) {
     ),
     addMessage: db.prepare(
       'INSERT INTO messages (conversation_id, role, content) VALUES (?, ?, ?)'
+    ),
+    updateSessionId: db.prepare(
+      'UPDATE conversations SET session_id = ? WHERE id = ?'
     ),
   };
 

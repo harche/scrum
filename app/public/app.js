@@ -90,8 +90,7 @@
   function showWelcome() {
     messagesEl.innerHTML = `<div class="welcome">
       <h2>Scrum Master Dashboard</h2>
-      <p>Chat with your scrum assistant or search commands above.</p>
-      <p class="welcome-hint">Press <kbd>/</kbd> or <kbd>Cmd+K</kbd> to search commands, or just type in the chat.</p>
+      <p>Chat with your scrum assistant. Type <kbd>/</kbd> to browse commands.</p>
     </div>`;
   }
 
@@ -241,15 +240,30 @@
 
   chatForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const text = userInput.value.trim();
+    let text = userInput.value.trim();
     if (!text) return;
 
     userInput.value = '';
+
+    // Transform slash commands: "/team-member Harshal" → "Team Member Harshal"
+    if (text.startsWith('/') && window._transformSlashCommand) {
+      const transformed = window._transformSlashCommand(text);
+      if (transformed) {
+        text = transformed;
+      } else if (text.match(/^\/\S+$/)) {
+        // Bare "/cmd-id" with no arg — don't submit (user still needs to type the arg)
+        return;
+      }
+    }
+
     await submitUserMessage(text);
   });
 
+  const cmdDropdown = document.getElementById('cmd-dropdown');
+
   userInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
+      if (cmdDropdown && !cmdDropdown.classList.contains('hidden')) return;
       e.preventDefault();
       chatForm.dispatchEvent(new Event('submit'));
     }
@@ -305,12 +319,16 @@
     }
 
     try {
+      // Send just the latest user message + conversationId (SDK manages history via sessions)
+      const lastUserMsg = conversationHistory[conversationHistory.length - 1];
+      const convId = window.chatHistory ? window.chatHistory.getCurrentId() : null;
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          messages: conversationHistory,
-          system: '',
+          message: typeof lastUserMsg?.content === 'string' ? lastUserMsg.content : JSON.stringify(lastUserMsg?.content),
+          conversationId: convId,
+          selectedTeam: teamSelector ? teamSelector.value : null,
         }),
         signal: controller.signal,
       });
@@ -373,6 +391,7 @@
               }
 
               case 'tool_start': {
+                if (['Bash','Read','Grep','Glob','Edit','Write','AskUserQuestion','ToolSearch'].includes(data.name)) break;
                 const indicator = document.createElement('div');
                 indicator.className = 'thinking-indicator';
                 indicator.id = `toolstart-${data.id}`;
@@ -401,11 +420,16 @@
               }
 
               case 'tool_call': {
-                hadToolCall = true;
-                hadRichData = false;
+                const isBuiltinTool = ['Bash','Read','Grep','Glob','Edit','Write','AskUserQuestion','ToolSearch'].includes(data.name);
+                if (!isBuiltinTool) {
+                  hadToolCall = true;
+                  hadRichData = false;
+                }
 
                 const startIndicator = document.getElementById(`toolstart-${data.id}`);
                 if (startIndicator) startIndicator.remove();
+
+                if (isBuiltinTool) break; // hide built-in tool UI — only show rich data + text
 
                 const thinkingTool = document.createElement('div');
                 thinkingTool.className = 'thinking-indicator';
@@ -471,6 +495,14 @@
                 break;
               }
 
+              case 'user_prompt': {
+                hadRichData = true;
+                const promptCard = createUserPromptCard(data);
+                contentEl.appendChild(promptCard);
+                scrollToBottom();
+                break;
+              }
+
               case 'error': {
                 hadError = true;
                 const errEl = document.createElement('div');
@@ -531,6 +563,75 @@
     } finally {
       streamEnded(controller);
     }
+  }
+
+  // ── User Prompt Card (AskUserQuestion equivalent) ─────────────────────
+
+  function createUserPromptCard(data) {
+    const esc = window._escapeHtml;
+    const card = document.createElement('div');
+    card.className = 'user-prompt-card';
+
+    let html = `<div class="user-prompt-question">${esc(data.question)}</div>`;
+
+    if (data.context) {
+      html += `<div class="user-prompt-context">${esc(data.context)}</div>`;
+    }
+
+    html += '<div class="user-prompt-options">';
+    for (const opt of (data.options || [])) {
+      html += `<button class="user-prompt-btn">${esc(opt)}</button>`;
+    }
+    html += '</div>';
+
+    html += `<div class="user-prompt-custom">
+      <input type="text" class="user-prompt-input" placeholder="Or type a response...">
+      <button class="user-prompt-submit">Send</button>
+    </div>`;
+
+    card.innerHTML = html;
+
+    // Wire up option buttons
+    card.querySelectorAll('.user-prompt-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        disablePromptCard(card, btn);
+        window.sendChatMessage(btn.textContent);
+      });
+    });
+
+    // Wire up custom text input
+    const customInput = card.querySelector('.user-prompt-input');
+    const submitBtn = card.querySelector('.user-prompt-submit');
+
+    submitBtn.addEventListener('click', () => {
+      const value = customInput.value.trim();
+      if (value) {
+        disablePromptCard(card, null);
+        window.sendChatMessage(value);
+      }
+    });
+
+    customInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        e.stopPropagation();
+        submitBtn.click();
+      }
+    });
+
+    return card;
+  }
+
+  function disablePromptCard(card, selectedBtn) {
+    card.classList.add('responded');
+    card.querySelectorAll('.user-prompt-btn').forEach(b => {
+      b.disabled = true;
+      if (b === selectedBtn) b.classList.add('selected');
+    });
+    const inp = card.querySelector('.user-prompt-input');
+    if (inp) inp.disabled = true;
+    const sub = card.querySelector('.user-prompt-submit');
+    if (sub) sub.disabled = true;
   }
 
   function truncate(str, maxLen) {

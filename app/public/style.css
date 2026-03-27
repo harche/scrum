@@ -154,71 +154,60 @@ header h1 {
 #team-selector:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-subtle); }
 #team-selector option { background: var(--bg); color: var(--text); }
 
-/* ── Command Search ──────────────────────────────────────────────── */
+/* ── Command Palette (drop-up from chat input) ──────────────────── */
 
-.cmd-search-wrapper {
+.chat-input-wrapper {
   position: relative;
-  margin-left: auto;
-  flex-shrink: 0;
+  flex: 1;
+  display: flex;
 }
 
-#cmd-search {
-  width: 240px;
-  padding: 7px 12px 7px 34px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: var(--bg);
-  color: var(--text);
-  font-size: var(--text-sm);
-  font-family: var(--font-body);
-  outline: none;
-  transition: all 0.2s ease;
-}
-
-.cmd-search-wrapper::before {
-  content: '';
-  position: absolute;
-  left: 11px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 14px;
-  height: 14px;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%238C8C86' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E");
-  background-size: contain;
-  z-index: 1;
-  pointer-events: none;
-}
-
-#cmd-search:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 2px var(--accent-subtle);
-  width: 320px;
-}
-
-#cmd-search::placeholder { color: var(--text-muted); }
+.chat-input-wrapper #user-input { flex: 1; }
 
 .cmd-dropdown {
   position: absolute;
-  top: calc(100% + 6px);
+  bottom: calc(100% + 6px);
+  left: 0;
   right: 0;
-  width: 440px;
-  max-height: 460px;
+  max-height: 400px;
   overflow-y: auto;
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.10), 0 2px 8px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.10), 0 -2px 8px rgba(0, 0, 0, 0.05);
   z-index: 50;
   padding: 6px;
-  animation: dropdown-enter 0.12s ease-out;
+  animation: dropup-enter 0.12s ease-out;
 }
 
-@keyframes dropdown-enter {
-  from { opacity: 0; transform: translateY(-3px); }
+@keyframes dropup-enter {
+  from { opacity: 0; transform: translateY(4px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
 .cmd-dropdown.hidden { display: none; }
+
+.cmd-dropdown .cmd-hint {
+  padding: 6px 12px;
+  font-size: var(--text-xxs);
+  color: var(--text-muted);
+  font-family: var(--font-body);
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cmd-dropdown .cmd-hint kbd {
+  display: inline-block;
+  padding: 1px 5px;
+  font-size: 10px;
+  font-family: var(--font-mono);
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+}
 
 .cmd-category {
   padding: 10px 12px 4px;
@@ -604,7 +593,6 @@ header h1 {
 }
 
 #user-input {
-  flex: 1;
   padding: 10px 14px;
   background: var(--bg);
   border: 1px solid var(--border);
@@ -1395,6 +1383,122 @@ header h1 {
   border-color: rgba(197, 48, 48, 0.2);
 }
 
+/* ── User Prompt Card (AskUserQuestion equivalent) ──────────────── */
+
+.user-prompt-card {
+  border: 1px solid rgba(196, 112, 75, 0.25);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius);
+  padding: 16px;
+  background: var(--bg);
+  margin: 8px 0;
+  animation: msg-enter 0.2s ease-out;
+}
+
+.user-prompt-question {
+  font-family: var(--font-content);
+  font-size: var(--text-md);
+  font-weight: 500;
+  color: var(--text);
+  margin-bottom: 12px;
+  line-height: 1.5;
+}
+
+.user-prompt-context {
+  font-size: var(--text-sm);
+  color: var(--text-dim);
+  background: var(--bg-alt);
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  margin-bottom: 12px;
+  font-family: var(--font-content);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+  border: 1px solid var(--border);
+}
+
+.user-prompt-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.user-prompt-btn {
+  padding: 8px 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--text);
+  cursor: pointer;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  font-family: var(--font-body);
+  transition: all 0.15s ease;
+}
+
+.user-prompt-btn:hover {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+.user-prompt-btn.selected {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+.user-prompt-custom {
+  display: flex;
+  gap: 8px;
+}
+
+.user-prompt-input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  color: var(--text);
+  font-size: var(--text-sm);
+  font-family: var(--font-body);
+  transition: border-color 0.15s;
+}
+
+.user-prompt-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-subtle);
+}
+
+.user-prompt-input::placeholder { color: var(--text-muted); }
+
+.user-prompt-submit {
+  padding: 8px 16px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  font-family: var(--font-body);
+  transition: background 0.15s;
+}
+
+.user-prompt-submit:hover { background: var(--accent-hover); }
+
+.user-prompt-card.responded {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.user-prompt-card.responded .user-prompt-btn.selected {
+  opacity: 1;
+}
+
 /* ── Scrollbar ───────────────────────────────────────────────────── */
 
 ::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -1461,10 +1565,6 @@ header h1 {
 
   #team-selector {
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%236B6B65'%3E%3Cpath d='M2 4l4 4 4-4'/%3E%3C/svg%3E");
-  }
-
-  .cmd-search-wrapper::before {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%236B6B65' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E");
   }
 
   .welcome-hint kbd {

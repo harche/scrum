@@ -281,15 +281,13 @@
     container.innerHTML = html;
   }
 
-  // Inline prompt helpers for action buttons
-  window.promptComment = function(key) {
-    const text = prompt('Enter comment text:');
-    if (text) window.sendChatMessage(`Add comment to ${key}: "${text}"`);
-  };
-  window.promptPoints = function(key) {
-    const pts = prompt('Enter story points:');
-    if (pts) window.sendChatMessage(`Set story points on ${key} to ${pts}`);
-  };
+  function fillInput(text) {
+    const input = document.getElementById('user-input');
+    input.value = text;
+    input.focus();
+  }
+  window.promptComment = (key) => fillInput(`Add comment to ${key}: `);
+  window.promptPoints = (key) => fillInput(`Set points on ${key} to `);
 
   // ── Bug Overview ──────────────────────────────────────────────────────
 
