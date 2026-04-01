@@ -27,7 +27,14 @@ cmd_sprint_issues() {
   local sprint_id="$1"
   local limit="${2:-100}"
   local fields="${3:-$ISSUE_FIELDS}"
-  _curl "${JIRA_BASE}/rest/agile/1.0/sprint/${sprint_id}/issue?maxResults=${limit}&fields=${fields}"
+  local jql="${4:-}"
+  local url="${JIRA_BASE}/rest/agile/1.0/sprint/${sprint_id}/issue?maxResults=${limit}&fields=${fields}"
+  if [[ -n "$jql" ]]; then
+    local encoded
+    encoded=$(python3 -c "import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1]))" "$jql")
+    url+="&jql=${encoded}"
+  fi
+  _curl "$url"
 }
 
 cmd_start_sprint() {
